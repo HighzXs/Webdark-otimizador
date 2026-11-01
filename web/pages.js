@@ -197,7 +197,6 @@ SpaceTabs.files = (() => {
       };
       renderList();
     },
-    unmount() { if (F.scanning) { api.cancel_scan(); F.scanning = false; busy(-1); } },
     info() { const s = $("#root"); if (s && window.INFO) s.innerHTML = window.INFO.drives.map((d) => `<option ${d === F.root ? "selected" : ""}>${esc(d)}</option>`).join(""); },
   };
 })();

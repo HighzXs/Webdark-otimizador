@@ -1,4 +1,4 @@
-// Telas: Espaço (abas Pastas, Duplicados, Downloads antigos e o contêiner das abas) e Limpeza.
+﻿// Telas: Espaço (abas Pastas, Duplicados, Downloads antigos e o contêiner das abas) e Limpeza.
 
 // ================================================================ ESPAÇO (contêiner)
 Pages.space = (() => {
@@ -65,19 +65,19 @@ SpaceTabs.dirs = (() => {
       paint();
     },
     show() { if (!S.path && !S.loading) scan((window.INFO && window.INFO.drives[0]) || "C:\\"); },
-    unmount() { if (S.loading) { S.loading = false; busy(-1); api.cancel_scan(); } },
   };
 })();
 
 // --------------------------------------------------------------- Duplicados
 SpaceTabs.dups = (() => {
-  const S = { groups: [], total: 0, marks: new Set(), scanning: false, progress: "" };
+  const S = { groups: [], total: 0, marks: new Set(), scanning: false, done: false, progress: "" };
   const sizeOf = (p) => { for (const g of S.groups) if (g.files.some((f) => f.path === p)) return g.size; return 0; };
   function paint() {
     const box = $("#dupl");
     if (!box) return;
     if (S.scanning) box.innerHTML = `<div class="empty">${esc(S.progress || "Procurando… (pode levar alguns minutos)")}</div>`;
-    else if (!S.groups.length) box.innerHTML = '<div class="empty">Escolha onde procurar e clique em “Procurar”.<br>Nenhum duplicado até agora. 👍</div>';
+    else if (!S.groups.length) box.innerHTML = S.done ? '<div class="empty">Nenhum duplicado desse tamanho por aqui. 👍<br>Tente “maiores que 1 MB” ou outra pasta.</div>'
+      : '<div class="empty">Escolha onde procurar e clique em “Procurar”.<br>A busca continua sozinha se você trocar de tela.</div>';
     else box.innerHTML = S.groups.map((g) => `<div class="grp" style="padding-top:16px">${g.files.length} cópias de ${fmt(g.size)} • desperdício de ${fmt(g.size * (g.files.length - 1))}</div>` +
       g.files.map((f) => `<div class="row slim" data-p="${esc(f.path)}" style="--cols:44px 1fr 100px">
         <div class="cb ${S.marks.has(f.path) ? "on" : ""}" data-a="check"></div>
@@ -92,7 +92,7 @@ SpaceTabs.dups = (() => {
   }
   on("dups:progress", (t) => { S.progress = t; paint(); });
   on("dups:done", (d) => {
-    S.groups = d.groups; S.total = d.total; S.scanning = false; busy(-1);
+    S.groups = d.groups; S.total = d.total; S.scanning = false; S.done = true; busy(-1);
     S.marks = new Set(d.groups.flatMap((g) => g.files.slice(1).map((f) => f.path)));
     paint();
   });
@@ -103,7 +103,7 @@ SpaceTabs.dups = (() => {
         <button class="btn" id="dupgo">🔍 Procurar</button><span class="muted" id="dupinfo"></span><span style="flex:1"></span>
         <button class="btn red" id="dupdel" disabled>🗑 Mandar marcados pra lixeira</button></div>
         <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><div class="list" id="dupl"></div></div>`;
-      $("#dupgo").onclick = () => { S.scanning = true; S.groups = []; S.marks.clear(); S.progress = ""; busy(1); paint(); api.dups_scan($("#dupwhere").value, +$("#dupmin").value); };
+      $("#dupgo").onclick = () => { if (S.scanning) return; S.scanning = true; S.done = false; S.groups = []; S.marks.clear(); S.progress = ""; busy(1); paint(); api.dups_scan($("#dupwhere").value, +$("#dupmin").value); };
       $("#dupl").onclick = (e) => {
         const row = e.target.closest(".row");
         if (!row || e.target.dataset.a !== "check") return;
@@ -124,13 +124,12 @@ SpaceTabs.dups = (() => {
       };
       paint();
     },
-    unmount() { if (S.scanning) { S.scanning = false; busy(-1); api.cancel_scan(); } },
   };
 })();
 
 // ---------------------------------------------------------- Downloads antigos
 SpaceTabs.dl = (() => {
-  const S = { rows: [], scanning: false, done: false };
+  const S = { rows: [], checked: new Set(), scanning: false, done: false };
   function paint() {
     const box = $("#dll");
     if (!box) return;
@@ -139,26 +138,50 @@ SpaceTabs.dl = (() => {
     else if (!S.rows.length) box.innerHTML = '<div class="empty">Nada velho por aqui. 👍</div>';
     else box.innerHTML = S.rows.map((r) => {
       const lock = r.level === "danger";
-      return `<div class="row" data-id="${r.id}" style="--cols:118px 1fr 100px 150px"><div>${riskPill(r)}</div>
+      return `<div class="row" data-id="${r.id}" style="--cols:44px 118px 1fr 100px 150px"><div class="cb ${S.checked.has(r.id) ? "on" : ""} ${lock ? "off" : ""}" data-a="check"></div><div>${riskPill(r)}</div>
         <div style="min-width:0"><div class="name">${esc(r.rel)}</div><div class="why">${esc(r.reason)}</div></div><div class="size">${fmt(r.size)}</div>
         <div class="acts"><button class="mini" data-a="show">Mostrar</button><button class="mini red" data-a="trash" ${lock ? "disabled" : ""}>${lock ? "🔒" : "🗑"}</button></div></div>`;
     }).join("");
     $("#dlgo").disabled = S.scanning;
     $("#dlinfo").textContent = S.done ? `${S.rows.length} arquivo(s) • ${fmt(S.rows.reduce((a, r) => a + r.size, 0))}` : "";
+    const chosen = S.rows.filter((r) => S.checked.has(r.id)), safe = S.rows.filter((r) => r.level === "ok");
+    const del = $("#dldel");
+    del.hidden = !chosen.length;
+    del.textContent = `🗑 Mandar ${chosen.length} marcado(s) pra lixeira (${fmt(chosen.reduce((a, r) => a + r.size, 0))})`;
+    $("#dlsafe").hidden = !safe.length;
+    $("#dlsafe").textContent = safe.every((r) => S.checked.has(r.id)) ? "Desmarcar todos" : `✔ Marcar os ${safe.length} seguros`;
   }
-  on("dl:done", (rows) => { S.rows = rows; S.scanning = false; S.done = true; busy(-1); paint(); });
+  on("dl:done", (rows) => { S.rows = rows; S.checked.clear(); S.scanning = false; S.done = true; busy(-1); paint(); });
   return {
     mount(el) {
       el.innerHTML = `<div class="tools"><span class="muted">Sem mexer há mais de</span><select id="dldays"><option value="30">30 dias</option><option value="60">60 dias</option>
         <option value="90" selected>90 dias</option><option value="180">180 dias</option><option value="365">1 ano</option></select>
-        <button class="btn" id="dlgo">🔍 Listar</button><span class="muted" id="dlinfo"></span></div>
+        <button class="btn" id="dlgo">🔍 Listar</button><span class="muted" id="dlinfo"></span><span style="flex:1"></span>
+        <button class="btn" id="dlsafe" hidden></button><button class="btn red" id="dldel" hidden></button></div>
         <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><div class="list" id="dll"></div></div>`;
-      $("#dlgo").onclick = () => { S.scanning = true; busy(1); paint(); api.dl_scan(+$("#dldays").value); };
+      $("#dlgo").onclick = () => { if (S.scanning) return; S.scanning = true; busy(1); paint(); api.dl_scan(+$("#dldays").value); };
+      $("#dlsafe").onclick = () => {
+        const safe = S.rows.filter((r) => r.level === "ok");
+        if (safe.every((r) => S.checked.has(r.id))) safe.forEach((r) => S.checked.delete(r.id));
+        else safe.forEach((r) => S.checked.add(r.id));
+        paint();
+      };
+      $("#dldel").onclick = async () => {
+        const chosen = S.rows.filter((r) => S.checked.has(r.id) && r.level !== "danger"), total = chosen.reduce((a, r) => a + r.size, 0);
+        const care = chosen.filter((r) => r.level === "care").length;
+        if (!await confirmBox({ title: `Mandar ${chosen.length} arquivo(s) para a lixeira?`, body: `Libera ${fmt(total)}. Dá pra recuperar da lixeira do Windows.` + (care ? `\n\n⚠ ${care} deles estão como CUIDADO: confira antes.` : ""), ok: "Mandar para a lixeira", danger: care > 0 })) return;
+        busy(1); const res = await api.trash(chosen.map((r) => r.path)); busy(-1);
+        const gone = new Set(res.done);
+        S.rows = S.rows.filter((r) => !gone.has(r.path)); S.checked = new Set([...S.checked].filter((id) => S.rows.some((r) => r.id === id)));
+        paint();
+        toast(res.failed.length ? `⚠ ${res.done.length} ok, ${res.failed.length} falharam: ${res.failed[0].err}` : `✅ ${fmt(res.freed)} na lixeira`);
+      };
       $("#dll").onclick = async (e) => {
         const row = e.target.closest(".row");
         if (!row) return;
         const r = S.rows.find((x) => x.id === +row.dataset.id), a = e.target.dataset.a;
-        if (a === "show") api.reveal(r.path);
+        if (a === "check") { if (r.level === "danger") return; S.checked.has(r.id) ? S.checked.delete(r.id) : S.checked.add(r.id); paint(); }
+        else if (a === "show") api.reveal(r.path);
         else if (a === "trash") {
           if (!await confirmBox({ title: "Mandar para a lixeira?", body: `${r.label}: ${r.reason}\n\n${r.path}`, ok: "Mandar para a lixeira", danger: r.level === "care" })) return;
           const res = await api.trash([r.path]);
@@ -167,7 +190,6 @@ SpaceTabs.dl = (() => {
       };
       paint();
     },
-    unmount() { if (S.scanning) { S.scanning = false; busy(-1); api.cancel_scan(); } },
   };
 })();
 

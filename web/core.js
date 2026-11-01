@@ -1,13 +1,26 @@
 // Base da interface: ponte com o Python, eventos, rotas, tema, avisos e janela de confirmação.
-const $ = (s, el = document) => el.querySelector(s);
-const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+let muted = false;                           // true enquanto um evento chega pra uma tela que não está aberta
+const $ = (s, el = document) => (muted && el === document ? null : el.querySelector(s));
+const $$ = (s, el = document) => (muted && el === document ? [] : [...el.querySelectorAll(s)]);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmt = (n) => n >= 1073741824 ? (n / 1073741824).toFixed(1) + " GB" : n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : n >= 1024 ? (n / 1024).toFixed(0) + " KB" : n + " B";
 
 // ---- eventos que o Python manda (window.__emit)
 const handlers = {};
 window.__emit = (event, payload) => (handlers[event] || []).slice().forEach((fn) => fn(payload));
-const on = (event, fn) => (handlers[event] = handlers[event] || []).push(fn);
+// Cada evento pertence a uma tela. Se a resposta chega depois de você trocar de aba, o handler só guarda o estado:
+// sem isso, "#list" (nome repetido nas telas) pegava a lista da tela errada e desenhava por cima.
+const OWNER = { bloat: "bloat", progs: "progs", start: "start", proc: "proc", scan: "space", dirs: "space", dups: "space", dl: "space",
+  cl: "clean", clean: "home", summary: "home", health: "health", sys: "perf", perf: "perf", sec: "security" };
+let current = null;
+const on = (event, fn) => {
+  const owner = OWNER[event.split(":")[0]] || (event === "summary" ? "home" : null);
+  (handlers[event] = handlers[event] || []).push(!owner ? fn : (p) => {
+    if (owner === current) return fn(p);
+    muted = true;
+    try { fn(p); } catch (e) { /* sem tela pra desenhar: o estado já foi guardado */ } finally { muted = false; }
+  });
+};
 
 // ---- chamadas ao Python
 const ready = new Promise((res) => {
@@ -54,7 +67,7 @@ function inputBox({ title, body = "", value = "", readonly = false, ok = "OK" })
 
 // ---- barra de atividade da lateral
 let busyCount = 0;
-function busy(delta) { busyCount = Math.max(0, busyCount + delta); $("#busy").classList.toggle("on", busyCount > 0); }
+function busy(delta) { busyCount = Math.max(0, busyCount + delta); document.getElementById("busy").classList.toggle("on", busyCount > 0); }
 
 // ---- tema
 const THEME_DEFAULT = { accent: "#8b5cf6", blur: true, blurpx: 22, font: "Segoe UI", glow: true };
@@ -78,7 +91,6 @@ const NAV = [
   ["progs", "📦", "Programas"], ["start", "🚀", "Inicialização"], ["health", "🩺", "Saúde"], ["perf", "⚡", "Desempenho"],
   ["proc", "🧠", "Processos"], ["security", "🛡", "Segurança"], ["settings", "🎨", "Ajustes"],
 ];
-let current = null;
 function go(id) {
   const prev = current && Pages[current];
   if (prev && prev.unmount) prev.unmount();

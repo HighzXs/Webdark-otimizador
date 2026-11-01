@@ -93,3 +93,5 @@ input[type=color] { width: 40px; height: 34px; border: 1px solid var(--line); bo
 .dialog .btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 .tabbody { display: flex; flex-direction: column; gap: 14px; flex: 1; min-height: 0; }
 .soon-card { padding: 28px; text-align: center; margin: auto; max-width: 520px; }
+
+.cb.off{opacity:.25;pointer-events:none}

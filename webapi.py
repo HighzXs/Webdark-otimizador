@@ -56,7 +56,7 @@ class Api:
     def __init__(self):
         self._window = None
         self._prefs = settings.load()
-        self._cancel = threading.Event()
+        self._cancels = {k: threading.Event() for k in ("dirs", "dups", "dl", "files")}
         self._found = {}          # caminho -> nível de risco do último escaneamento (só esses podem ir pra lixeira)
         self._appx, self._progs, self._starts, self._procs = {}, {}, {}, {}   # o que a última busca achou, por id
         self._cleaners, self._dups, self._tweaks = {}, {}, {}
@@ -648,9 +648,14 @@ class Api:
         return {"ok": ok, "msg": msg}
 
     # --------------------------------------------------------- pastas / duplicados / downloads
+    def _new_cancel(self, kind):
+        """Uma varredura por tipo: começar outra do mesmo tipo cancela a anterior, de tipos diferentes seguem juntas."""
+        self._cancels[kind].set()
+        self._cancels[kind] = ev = threading.Event()
+        return ev
+
     def dirs_scan(self, path):
-        self._cancel.set()
-        self._cancel = ev = threading.Event()
+        ev = self._new_cancel("dirs")
 
         def work():
             items = bk.scan_children(path, ev)
@@ -661,8 +666,7 @@ class Api:
         self._thread(work)
 
     def dups_scan(self, where, min_mb):
-        self._cancel.set()
-        self._cancel = ev = threading.Event()
+        ev = self._new_cancel("dups")
 
         def work():
             roots = bk.user_folders() if where == "mine" else [where]
@@ -703,8 +707,7 @@ class Api:
         return {"done": done, "failed": failed, "freed": freed}
 
     def dl_scan(self, days):
-        self._cancel.set()
-        self._cancel = ev = threading.Event()
+        ev = self._new_cancel("dl")
 
         def work():
             base = system.downloads_dir()
@@ -764,8 +767,7 @@ class Api:
         p = self._progs.get(pid)
         if p is None:
             return False
-        bk.run_uninstaller(p.uninstall)
-        return True
+        return bool(bk.run_uninstaller(p.uninstall))
 
     # ----------------------------------------------------------- inicialização
     def start_scan(self):
@@ -828,8 +830,7 @@ class Api:
 
     # --------------------------------------------------------- arquivos grandes
     def scan_files(self, root, min_mb):
-        self._cancel.set()
-        self._cancel = ev = threading.Event()
+        ev = self._new_cancel("files")
 
         def work():
             tick = self._throttled("scan:progress")
@@ -849,7 +850,8 @@ class Api:
         self._thread(work)
 
     def cancel_scan(self):
-        self._cancel.set()
+        for e in self._cancels.values():
+            e.set()
 
     def trash(self, paths):
         """Manda para a lixeira. Só aceita caminhos da última busca e nunca os marcados NÃO APAGUE."""

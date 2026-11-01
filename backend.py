@@ -4,6 +4,7 @@ import glob
 import heapq
 import json
 import os
+import re
 import shutil
 import subprocess
 import winreg
@@ -689,8 +690,32 @@ def list_programs():
     return sorted(found.values(), key=lambda p: (not p.suspect, -p.size, p.name.lower()))
 
 
+def _split_command(cmd):
+    """Separa 'exe' e 'argumentos' de uma linha de desinstalação (com ou sem aspas, com espaços no caminho)."""
+    cmd = os.path.expandvars((cmd or "").strip())
+    if cmd.startswith('"'):
+        end = cmd.find('"', 1)
+        return cmd[1:end], cmd[end + 1:].strip()
+    m = re.search(r"\.(exe|bat|cmd|msc)\b", cmd, re.I)
+    if m:
+        return cmd[:m.end()], cmd[m.end():].strip()
+    parts = cmd.split(" ", 1)
+    return parts[0], parts[1] if len(parts) > 1 else ""
+
+
 def run_uninstaller(cmd):
-    subprocess.Popen(cmd, shell=True)
+    """Abre o desinstalador pelo ShellExecute (funciona no .exe sem console e pede administrador se precisar)."""
+    import ctypes
+    exe, args = _split_command(cmd)
+    shell = ctypes.windll.shell32.ShellExecuteW
+    for verb in ("open", "runas"):
+        if shell(None, verb, exe, args or None, None, 1) > 32:
+            return True
+    try:
+        subprocess.Popen(cmd, shell=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except OSError:
+        return False
 
 
 # ------------------------------------------------------------------ histórico

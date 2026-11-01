@@ -111,7 +111,8 @@ Pages.progs = (() => {
         if (e.target.dataset.a !== "un") return;
         const p = S.items.find((x) => x.id === e.target.closest(".row").dataset.id);
         if (await confirmBox({ title: "Desinstalar?", body: `Abrir o desinstalador de:\n\n${p.name}`, ok: "Abrir desinstalador", danger: true })) {
-          await api.prog_uninstall(p.id); toast("Desinstalador aberto. Depois clique em Atualizar."); }
+          const ok = await api.prog_uninstall(p.id);
+          toast(ok ? "Desinstalador aberto. Depois clique em Atualizar." : "⚠ Não consegui abrir o desinstalador desse programa."); }
       };
       paint();
     },

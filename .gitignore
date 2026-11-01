@@ -9,3 +9,17 @@ _*.png
 _*.txt
 meme.jpg
 icon_opcoes/
+
+# app antigo (Tk) e demos: ficam só no PC
+app.py
+page_home.py
+page_space.py
+page_system.py
+page_security.py
+pages2.py
+ui_common.py
+ui_table.py
+curve_editor.py
+build.bat
+make_icon.py
+demos
