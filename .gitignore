@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+_shots/
+_*.py
+_*.png
+_*.txt
+meme.jpg
