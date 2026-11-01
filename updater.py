@@ -101,6 +101,7 @@ def apply(new_path):
         "exit /b 1\r\n"
         ":ok\r\n"
         f'start "" "{exe}"\r\n'
+        "ping 127.0.0.1 -n 9 >nul\r\n"                      # o app novo confere quem o abriu: este script não pode sumir antes
         '(goto) 2>nul & del "%~f0"\r\n'
     )
     with open(bat, "w", encoding="cp850", errors="replace") as f:
