@@ -63,6 +63,15 @@ def installed_version():
         return "0"
 
 
+def _was_installed():
+    """True se o registro de "Aplicativos instalados" existe (mesmo que o .exe tenha sumido)."""
+    try:
+        winreg.CloseKey(winreg.OpenKey(winreg.HKEY_CURRENT_USER, UNINST_KEY))
+        return True
+    except OSError:
+        return False
+
+
 def _shortcut(lnk, target):
     import backend
     q = lambda s: "'" + s.replace("'", "''") + "'"
@@ -110,8 +119,8 @@ def offer(prefs):
     if have is not None and _ver(have) >= _ver(VERSION):
         launch_installed()                     # já instalado (igual ou mais novo): abre o do menu Iniciar
         return True
-    if have is None and prefs.get("install_asked"):
-        return False
+    if have is None and prefs.get("install_asked") and not _was_installed():
+        return False                           # recusou antes. Instalação quebrada (ex.: antivírus apagou o .exe) pergunta de novo
     text = (f"Atualizar o WebDark instalado ({have} → {VERSION})?" if have is not None else
             "Instalar o WebDark neste PC?\n\nEle vai aparecer na pesquisa do menu Iniciar e na Área de Trabalho, "
             "e você pode desinstalar em Configurações > Aplicativos.\n\nNão precisa de administrador.")

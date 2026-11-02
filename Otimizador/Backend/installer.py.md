@@ -19,6 +19,7 @@ Por usuário (HKCU), sem admin.
   - já instalado com versão ≥ → abre o instalado e sai;
   - instalado mais velho → pergunta se quer atualizar a instalação;
   - não instalado → pergunta uma vez só (`prefs["install_asked"]`); se aceitar, `install()` copia o .exe, cria atalhos e abre o instalado.
+  - instalação quebrada (chave do registro existe mas o .exe sumiu, ex.: antivírus apagou) → `_was_installed()` faz perguntar de novo, mesmo com `install_asked`.
 - Cópia instalada aberta → `register()` numa thread em `on_start` (mantém atalho e `DisplayVersion` em dia depois do [[updater.py]]).
 
 Atalhos são criados pelo PowerShell (`WScript.Shell`, `_shortcut`). Avisos usam `MessageBoxW` (antes da janela existir).
