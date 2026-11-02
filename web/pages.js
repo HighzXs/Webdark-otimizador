@@ -92,25 +92,28 @@ Pages.home = (() => {
           <button class="btn" id="adminnow">Reabrir como administrador</button></div>
         <div class="tiles">
           <div class="card tile" id="tile-free"><span class="muted">💽 Espaço livre (C:)</span><b id="t-free">…</b><span class="muted" id="t-free-sub"> </span></div>
-          <div class="card tile"><span class="muted">🧹 Dá pra limpar</span><b id="t-junk">…</b><span class="muted">lixo seguro, sem admin</span></div>
+          <div class="card tile"><span class="muted">🧹 Dá pra limpar</span><b id="t-junk">…</b><span class="muted">lixo seguro</span></div>
           <div class="card tile"><span class="muted">🚀 Abrem com o Windows</span><b id="t-start">…</b><span class="muted" id="t-start-sub"> </span></div>
           <div class="card tile"><span class="muted">🧠 Memória em uso</span><b id="t-ram">…</b><span class="muted" id="t-ram-sub"> </span></div>
         </div>
-        <div class="card" style="padding:20px">
-          <div style="display:flex;gap:16px;align-items:center"><button class="btn" id="go">⚡ Faxina rápida</button>
-            <span class="muted">Limpa só o que é seguro: temporários, cache, lixeira e restos do Windows.</span></div>
-          <div class="bar"><i id="fill"></i></div><div class="muted" id="ptxt"></div>
+        <div class="homegrid">
+          <div class="card faxina">
+            <b>⚡ Faxina rápida</b>
+            <div class="muted">Limpa só o que é seguro: temporários, cache, lixeira e restos do Windows. Seus arquivos não são tocados.</div>
+            <div class="bar"><i id="fill"></i></div>
+            <div class="faxina-row"><span class="muted" id="ptxt"></span><button class="btn" id="go">Limpar agora</button></div>
+          </div>
+          <div class="card now">
+            <b>🖥 Seu PC agora</b>
+            <div class="metric"><span class="muted">⚙ Processador</span><div class="meter"><i id="l-cpu-b" style="width:0"></i></div><span><b id="l-cpu">…</b></span></div>
+            <div class="metric"><span class="muted">🧠 Memória</span><div class="meter"><i id="l-ram-b" style="width:0"></i></div><span><b id="l-ram">…</b> <span class="muted" id="l-ram-s"></span></span></div>
+            <div class="metric up"><span class="muted">⏱ Ligado há</span><span><b id="l-up">…</b></span><span class="muted" id="l-up-s"></span></div>
+          </div>
         </div>
-        <h2>🖥 Seu PC agora</h2>
-        <div class="live">
-          <div class="card"><span class="muted">⚙ Processador</span><div><b id="l-cpu">…</b></div><div class="meter"><i id="l-cpu-b" style="width:0"></i></div></div>
-          <div class="card"><span class="muted">🧠 Memória</span><div><b id="l-ram">…</b> <span class="muted" id="l-ram-s"></span></div><div class="meter"><i id="l-ram-b" style="width:0"></i></div></div>
-          <div class="card"><span class="muted">⏱ Ligado há</span><div><b id="l-up">…</b></div><div class="muted" id="l-up-s"> </div></div>
-        </div>
-        <div class="card" style="padding:8px 18px" id="drives"><div class="muted" style="padding:8px 0">Lendo os discos…</div></div>
+        <div class="card" style="padding:6px 18px" id="drives"><div class="muted" style="padding:8px 0">Lendo os discos…</div></div>
         <h2>🧾 Ficha técnica</h2>
         <div class="specs" id="specs"><div class="muted">Lendo as especificações… (leva alguns segundos)</div></div>
-        <div style="display:flex;align-items:center;gap:14px"><div class="muted" id="hist" style="padding:0 6px;flex:1"></div>
+        <div class="histrow"><div class="muted" id="hist"></div>
           <button class="ghost" id="restore">🛟 Criar ponto de restauração</button></div>
         </div>`;
       $("#adminnow").onclick = () => $("#adminBtn").click();

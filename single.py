@@ -36,5 +36,8 @@ def focus_existing(title):
     u.ShowWindow(hwnd, 5)          # SW_SHOW (tira da bandeja)
     if u.IsIconic(hwnd):
         u.ShowWindow(hwnd, 9)      # SW_RESTORE (tira da barra de tarefas)
+    u.keybd_event(0x12, 0, 0, 0)   # um Alt "aperta e solta" libera o SetForegroundWindow para quem acabou de ser aberto
+    u.keybd_event(0x12, 0, 2, 0)
+    u.BringWindowToTop(hwnd)
     u.SetForegroundWindow(hwnd)
     return True

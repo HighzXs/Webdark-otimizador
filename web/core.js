@@ -33,11 +33,20 @@ on("error", (msg) => toast("⚠ " + msg));
 
 // ---- avisos e confirmação
 function toast(text) {
+  // aviso de "precisa de administrador" vira uma pergunta com o botão pra reabrir, em vez de um recado que some
+  if (/precisa de administrador/i.test(text) && !(window.INFO && window.INFO.admin)) return adminPrompt(text.replace(/^⚠\s*/, ""));
   const e = $("#toast");
   e.textContent = text;
   e.classList.add("on");
   clearTimeout(toast.t);
   toast.t = setTimeout(() => e.classList.remove("on"), 2600);
+}
+async function adminPrompt(text) {
+  if (adminPrompt.open) return;
+  adminPrompt.open = true;
+  const yes = await confirmBox({ title: "Precisa de administrador", body: text + "\n\nO WebDark fecha e abre de novo como administrador. Quer fazer isso agora?", ok: "Reabrir como administrador" });
+  adminPrompt.open = false;
+  if (yes) document.getElementById("adminBtn").click();
 }
 function confirmBox({ title, body = "", ok = "Confirmar", cancel = "Cancelar", danger = false }) {
   return new Promise((resolve) => {

@@ -88,6 +88,68 @@ const PLAN = [
     d: "Baixa o clock sozinho se o PC esquentar demais.", why: "Protege notebooks e PCs que esquentam.", care: "Vem desligado: só funciona se você ligar." },
 ];
 
+// ---- otimização guiada (professor): o que a ferramenta faz em uma frase + o que clicar. A chave é a mesma do PLAN.
+const TUTOR = {
+  quick: ["Apaga temporários, cache dos navegadores e lixeira. Seus arquivos pessoais não são tocados.", "Clique em Faxina rápida."],
+  bloat: ["São apps que vêm no Windows e quase ninguém usa. Tirar libera espaço e deixa o PC mais leve.", "Clique em Marcar recomendados e depois em Remover marcados."],
+  progs: ["Lista seus programas, os maiores primeiro. O que você não usa só ocupa espaço.", "Marque só o que você reconhece e desinstale."],
+  start: ["São os programas que ligam junto com o Windows. Menos coisas ligando = PC que liga mais rápido.", "Clique em Desligar os recomendados."],
+  space: ["Acha os arquivos que mais pesam, com aviso de risco. Tudo vai pra lixeira, então dá pra voltar atrás.", "Clique em Procurar e apague os marcados como seguros."],
+  power: ["O plano de energia decide se o PC economiza ou rende o máximo.", "Em PC de mesa, escolha Alto desempenho."],
+  health: ["Confere se o disco está bom e se o Windows tem algum problema.", "Rode o diagnóstico e leia o resultado."],
+  net: ["O DNS é a agenda da internet. Um mais rápido faz os sites abrirem antes.", "Clique em Testar DNS e veja qual responde melhor."],
+  sec: ["Vigia a temperatura e baixa o clock sozinho se o PC esquentar demais. É opcional.", "Ligue o interruptor se o seu PC esquenta."],
+};
+
+// ---- professor: cartão flutuante que leva a cada tela, acende o botão e explica. O usuário clica no botão de verdade.
+const Tutor = (() => {
+  let i = 0, on = false, el = null;
+  const total = PLAN.length;
+  const doneCount = () => PLAN.filter((s) => HELP.done.includes(s.k)).length;
+  function mark(k) { if (!HELP.done.includes(k)) { HELP.done = [...HELP.done, k]; helpSave(); } }
+  function paint() {
+    if (!el) return;
+    if (i >= total) {
+      el.innerHTML = `<div class="tt-head"><b>🎉 Pronto!</b></div><div class="tt-text">Você passou por todas as etapas e fez ${doneCount()} de ${total}. ${doneCount() < total ? "As puladas ficam no plano da Ajuda, pra fazer quando quiser." : "Seu PC está mais leve."}</div>
+        <div class="tt-acts"><button class="btn" id="tt-end">Concluir</button></div>`;
+      $("#tt-end").onclick = stop;
+      return;
+    }
+    const s = PLAN[i], t = TUTOR[s.k] || [s.d, ""];
+    el.innerHTML = `<div class="tt-head"><b>🎓 Passo ${i + 1} de ${total}</b><button class="mini" id="tt-x" title="Sair">✕</button></div>
+      <div class="bar" style="margin:0 0 10px"><i style="width:${(i / total) * 100}%"></i></div>
+      <div class="tt-title">${s.icon} ${esc(s.t)} <span class="pill ${s.level === "Seguro" ? "ok" : "care"}">${esc(s.level.toUpperCase())}</span></div>
+      <div class="tt-text">${esc(t[0])}</div>${t[1] ? `<div class="tt-do">👉 ${esc(t[1])}</div>` : ""}
+      <div class="tt-acts"><button class="mini" id="tt-pt">📍 Mostrar</button><span style="flex:1"></span>
+        <button class="mini" id="tt-bk" ${i === 0 ? "disabled" : ""}>◀ Voltar</button><button class="mini" id="tt-sk">Pular</button>
+        <button class="btn" id="tt-ok">Feito, próximo ▶</button></div>`;
+    $("#tt-x").onclick = stop;
+    $("#tt-pt").onclick = () => goAndPoint(s.where, s.sel);
+    $("#tt-bk").onclick = () => { i--; enter(); };
+    $("#tt-sk").onclick = () => { i++; enter(); };
+    $("#tt-ok").onclick = () => { mark(s.k); i++; enter(); };
+  }
+  function enter() {
+    paint();
+    if (i < total) goAndPoint(PLAN[i].where, PLAN[i].sel);
+  }
+  function start() {
+    const first = PLAN.findIndex((s) => !HELP.done.includes(s.k));
+    i = first < 0 ? 0 : first;
+    on = true;
+    helpToggle(false);
+    if (!el) { el = document.createElement("div"); el.id = "tutor"; document.querySelector(".stage").append(el); }
+    el.hidden = false;
+    enter();
+  }
+  function stop() {
+    on = false;
+    if (el) el.hidden = true;
+    if (current === "help") Pages.help.mount($(".page"));
+  }
+  return { start, stop, get on() { return on; } };
+})();
+
 const TOPICS = [
   ["O que é bloatware?", "São programas que já vêm instalados no Windows ou no PC novo (jogos de fábrica, propagandas, testes de antivírus) e quase ninguém usa. Ocupam espaço e às vezes rodam em segundo plano."],
   ["O que é DNS?", "É a “agenda telefônica” da internet: transforma o nome do site (google.com) no endereço dele. Se o DNS é lento, todo site demora um pouco mais pra começar a abrir."],
@@ -175,6 +237,8 @@ Pages.help = (() => {
     mount(el) {
       el.innerHTML = `<div><h1>Ajuda e dicas</h1><div class="muted">Sem pressa e sem obrigação. Use o plano abaixo no seu ritmo, ou clique no 💡 de qualquer tela pra entender cada botão dela.</div></div>
         <div class="scroll">
+          <div class="card tutorcta"><div style="flex:1"><b>🎓 Otimização guiada</b><div class="muted">Eu levo você a cada ferramenta, explico em uma frase o que ela faz e você otimiza o PC enquanto aprende.</div></div>
+            <button class="btn" id="tutgo">Me guie</button></div>
           <h2>🗺 Plano de otimização <span class="muted" id="planprog" style="font-weight:400"></span></h2>
           <div class="bar" style="margin:0"><i id="planbar"></i></div>
           <div id="planbox" style="display:flex;flex-direction:column;gap:10px"></div>
@@ -183,6 +247,7 @@ Pages.help = (() => {
           <div id="topics" style="display:flex;flex-direction:column;gap:8px"></div>
         </div>`;
       $("#hq").oninput = paintTopics;
+      $("#tutgo").onclick = () => Tutor.start();
       $("#planbox").onclick = (e) => {
         const g = e.target.dataset.go, d = e.target.dataset.done;
         if (g) { const s = PLAN.find((x) => x.k === g); goAndPoint(s.where, s.sel); }

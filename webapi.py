@@ -132,8 +132,7 @@ class Api:
             return True
         if not bk.relaunch_as_admin():                  # o usuário recusou o aviso do Windows
             return False
-        if self._window is not None:
-            threading.Timer(0.6, self._window.destroy).start()
+        threading.Timer(0.6, self.quit).start()         # sair de vez: no segundo plano, só fechar a janela escondia na bandeja e o mutex ficava preso
         return True
 
     def reveal(self, path):

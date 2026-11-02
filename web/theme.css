@@ -7,6 +7,7 @@
   --radius: 16px;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }       /* sem isto, um botão com display:flex ignora o atributo hidden */
 html, body { height: 100%; margin: 0; }
 body {
   font-family: var(--font); color: var(--text); overflow: hidden; user-select: none; font-size: 14px;
