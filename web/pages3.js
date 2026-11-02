@@ -1,30 +1,4 @@
-﻿// Telas: Espaço (abas Pastas, Duplicados, Downloads antigos e o contêiner das abas) e Limpeza.
-
-// ================================================================ ESPAÇO (contêiner)
-Pages.space = (() => {
-  let tab = "files";
-  const TABS = [["dirs", "📁 Pastas"], ["files", "📄 Arquivos grandes"], ["dups", "👯 Duplicados"], ["dl", "📥 Downloads antigos"]];
-  function open(t) {
-    const prev = SpaceTabs[tab];
-    if (prev && prev.unmount && $("#tabbody")) prev.unmount();
-    tab = t;
-    $$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === t));
-    const body = $("#tabbody");
-    body.innerHTML = "";
-    SpaceTabs[t].mount(body);
-    if (SpaceTabs[t].show) SpaceTabs[t].show();
-  }
-  return {
-    mount(el) {
-      el.innerHTML = head("Quem está comendo meu espaço?", "Pastas pesadas, arquivos grandes com aviso de risco, duplicados e downloads velhos.") +
-        `<div class="tabs">${TABS.map(([id, label]) => `<button class="chip" data-tab="${id}">${label}</button>`).join("")}</div><div id="tabbody" class="tabbody"></div>`;
-      $$("[data-tab]").forEach((b) => (b.onclick = () => open(b.dataset.tab)));
-      open(tab);
-    },
-    unmount() { const t = SpaceTabs[tab]; if (t && t.unmount) t.unmount(); },
-    info(i) { if (SpaceTabs.files.info) SpaceTabs.files.info(i); },
-  };
-})();
+﻿// Telas: Espaço (abas Pastas, Duplicados, Downloads antigos) e Limpeza. As abas são reunidas em pages6.js.
 
 const driveOptions = (sel) => ((window.INFO && window.INFO.drives) || ["C:\\"]).map((d) => `<option ${d === sel ? "selected" : ""}>${esc(d)}</option>`).join("");
 const riskPill = (r) => `<span class="pill ${r.level}">${esc(r.label)}</span>`;
@@ -51,8 +25,9 @@ SpaceTabs.dirs = (() => {
   on("dirs:list", (d) => { if (d.path !== S.path || !S.loading) return; S.items = d.items; S.loading = false; busy(-1); paint(); });
   return {
     mount(el) {
-      el.innerHTML = `<div class="tools"><select id="droot">${driveOptions(S.path)}</select><button class="btn" id="dscan">🔍 Escanear</button>
-        <button class="ghost" id="dup">⬆ Subir</button><span class="muted" id="dpath"></span></div>
+      el.innerHTML = `<div class="card bar2"><div class="fld"><label for="droot">Disco</label><select id="droot">${driveOptions(S.path)}</select></div>
+        <button class="btn" id="dscan">🔍 Escanear</button><button class="ghost" id="dup">⬆ Subir uma pasta</button>
+        <div class="fld grow"><label>Você está em</label><span class="muted" id="dpath" style="line-height:42px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span></div></div>
         <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><div class="list" id="dirl"></div></div>`;
       $("#dscan").onclick = () => scan($("#droot").value);
       $("#dup").onclick = () => { let p = S.path.replace(/\\$/, ""); p = p.slice(0, p.lastIndexOf("\\")); if (p.length === 2) p += "\\"; if (p) scan(p); };
@@ -98,9 +73,11 @@ SpaceTabs.dups = (() => {
   });
   return {
     mount(el) {
-      el.innerHTML = `<div class="tools"><select id="dupwhere"><option value="mine">Minhas pastas (Documentos, Downloads…)</option>${driveOptions("")}</select>
-        <select id="dupmin"><option value="1">maiores que 1 MB</option><option value="10" selected>maiores que 10 MB</option><option value="100">maiores que 100 MB</option></select>
-        <button class="btn" id="dupgo">🔍 Procurar</button><span class="muted" id="dupinfo"></span><span style="flex:1"></span>
+      el.innerHTML = `<div class="card bar2"><div class="fld"><label for="dupwhere">Onde procurar</label>
+        <select id="dupwhere"><option value="mine">Minhas pastas (Documentos, Downloads…)</option>${driveOptions("")}</select></div>
+        <div class="fld"><label for="dupmin">Tamanho mínimo</label>
+        <select id="dupmin"><option value="1">maiores que 1 MB</option><option value="10" selected>maiores que 10 MB</option><option value="100">maiores que 100 MB</option></select></div>
+        <button class="btn" id="dupgo">🔍 Procurar</button><span class="muted" id="dupinfo" style="flex:1;align-self:center"></span>
         <button class="btn red" id="dupdel" disabled>🗑 Mandar marcados pra lixeira</button></div>
         <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><div class="list" id="dupl"></div></div>`;
       $("#dupgo").onclick = () => { if (S.scanning) return; S.scanning = true; S.done = false; S.groups = []; S.marks.clear(); S.progress = ""; busy(1); paint(); api.dups_scan($("#dupwhere").value, +$("#dupmin").value); };
@@ -154,10 +131,10 @@ SpaceTabs.dl = (() => {
   on("dl:done", (rows) => { S.rows = rows; S.checked.clear(); S.scanning = false; S.done = true; busy(-1); paint(); });
   return {
     mount(el) {
-      el.innerHTML = `<div class="tools"><span class="muted">Sem mexer há mais de</span><select id="dldays"><option value="30">30 dias</option><option value="60">60 dias</option>
-        <option value="90" selected>90 dias</option><option value="180">180 dias</option><option value="365">1 ano</option></select>
-        <button class="btn" id="dlgo">🔍 Listar</button><span class="muted" id="dlinfo"></span><span style="flex:1"></span>
-        <button class="btn" id="dlsafe" hidden></button><button class="btn red" id="dldel" hidden></button></div>
+      el.innerHTML = `<div class="card bar2"><div class="fld"><label for="dldays">Sem mexer há mais de</label><select id="dldays"><option value="30">30 dias</option><option value="60">60 dias</option>
+        <option value="90" selected>90 dias</option><option value="180">180 dias</option><option value="365">1 ano</option></select></div>
+        <button class="btn" id="dlgo">🔍 Listar</button><span class="muted" id="dlinfo" style="flex:1;align-self:center"></span>
+        <button class="ghost" id="dlsafe" hidden></button><button class="btn red" id="dldel" hidden></button></div>
         <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><div class="list" id="dll"></div></div>`;
       $("#dlgo").onclick = () => { if (S.scanning) return; S.scanning = true; busy(1); paint(); api.dl_scan(+$("#dldays").value); };
       $("#dlsafe").onclick = () => {

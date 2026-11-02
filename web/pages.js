@@ -53,12 +53,43 @@ Pages.home = (() => {
     api.info().then((i) => { window.INFO = i; const h = $("#hist"); if (h) h.textContent = histText(i); });
   });
 
+  const adminNote = () => { const n = $("#adminnote"); if (n) n.hidden = !!(window.INFO && window.INFO.admin) || !window.INFO; };
+  const upText = (s) => { const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60); return (d ? d + "d " : "") + h + "h " + m + "min"; };
+
+  async function pullLive() {
+    const d = await api.live();
+    if (!$("#l-cpu")) return;
+    $("#l-cpu").textContent = Math.round(d.cpu) + "%";
+    $("#l-cpu-b").style.width = d.cpu + "%";
+    $("#l-ram").textContent = Math.round(d.ram_pct) + "%";
+    $("#l-ram-s").textContent = fmt(d.ram_used) + " de " + fmt(d.ram_total);
+    $("#l-ram-b").style.width = d.ram_pct + "%";
+    $("#l-up").textContent = upText(d.uptime);
+    $("#l-up-s").textContent = d.uptime > 7 * 86400 ? "⚠ Faz tempo sem reiniciar. Reiniciar ajuda." : "Reiniciar de vez em quando ajuda";
+    $("#drives").innerHTML = d.drives.map((x) => {
+      const pct = (x.used / x.total) * 100;
+      return `<div class="drv"><span class="n">💽 ${esc(x.root)}</span><div class="meter"><i class="${pct > 90 ? "hot" : ""}" style="width:${pct.toFixed(1)}%"></i></div>
+        <span class="u">${fmt(x.free)} livres de ${fmt(x.total)}</span></div>`;
+    }).join("");
+  }
+  function paintSpecs() {
+    const box = $("#specs");
+    if (!box || !st.specs) return;
+    box.innerHTML = st.specs.cards.length ? st.specs.cards.map((c) => `<div class="card spec"><i>${c.icon}</i><div style="min-width:0"><div class="k">${esc(c.k)}</div>
+      <div class="v" title="${esc(c.v)}">${esc(c.v)}</div>${c.s ? `<div class="s">${esc(c.s)}</div>` : ""}</div></div>`).join("") : '<div class="muted">Não consegui ler as especificações.</div>';
+  }
+  on("specs", (d) => { st.specs = d; paintSpecs(); });
+
   const histText = (i) => i.history_total ? `📈 Total liberado até hoje: ${fmt(i.history_total)}` : "📈 Ainda não liberei nada por aqui. Bora fazer a primeira faxina!";
 
   return {
     mount(el) {
       el.innerHTML = `
         <div><h1>Início</h1><div class="muted">Resumo do seu PC e uma faxina segura com um clique.</div></div>
+        <div class="scroll">
+        <div class="card adminnote" id="adminnote" hidden><div class="t"><b>🛡 Você está sem permissão de administrador</b>
+          <div class="muted">Algumas faxinas, reparos e ajustes do Windows ficam travados. Reabra como administrador pra liberar tudo.</div></div>
+          <button class="btn" id="adminnow">Reabrir como administrador</button></div>
         <div class="tiles">
           <div class="card tile" id="tile-free"><span class="muted">💽 Espaço livre (C:)</span><b id="t-free">…</b><span class="muted" id="t-free-sub"> </span></div>
           <div class="card tile"><span class="muted">🧹 Dá pra limpar</span><b id="t-junk">…</b><span class="muted">lixo seguro, sem admin</span></div>
@@ -70,8 +101,22 @@ Pages.home = (() => {
             <span class="muted">Limpa só o que é seguro: temporários, cache, lixeira e restos do Windows.</span></div>
           <div class="bar"><i id="fill"></i></div><div class="muted" id="ptxt"></div>
         </div>
+        <h2>🖥 Seu PC agora</h2>
+        <div class="live">
+          <div class="card"><span class="muted">⚙ Processador</span><div><b id="l-cpu">…</b></div><div class="meter"><i id="l-cpu-b" style="width:0"></i></div></div>
+          <div class="card"><span class="muted">🧠 Memória</span><div><b id="l-ram">…</b> <span class="muted" id="l-ram-s"></span></div><div class="meter"><i id="l-ram-b" style="width:0"></i></div></div>
+          <div class="card"><span class="muted">⏱ Ligado há</span><div><b id="l-up">…</b></div><div class="muted" id="l-up-s"> </div></div>
+        </div>
+        <div class="card" style="padding:8px 18px" id="drives"><div class="muted" style="padding:8px 0">Lendo os discos…</div></div>
+        <h2>🧾 Ficha técnica</h2>
+        <div class="specs" id="specs"><div class="muted">Lendo as especificações… (leva alguns segundos)</div></div>
         <div style="display:flex;align-items:center;gap:14px"><div class="muted" id="hist" style="padding:0 6px;flex:1"></div>
-          <button class="ghost" id="restore">🛟 Criar ponto de restauração</button></div>`;
+          <button class="ghost" id="restore">🛟 Criar ponto de restauração</button></div>
+        </div>`;
+      $("#adminnow").onclick = () => $("#adminBtn").click();
+      adminNote();
+      pullLive(); st.timer = setInterval(pullLive, 3000);
+      if (st.specs) paintSpecs(); else api.specs();
       $("#restore").onclick = async () => {
         if (!(window.INFO && window.INFO.admin)) return toast("Precisa de administrador. Use “Reabrir como administrador”.");
         busy(1); const r = await api.restore_point(); busy(-1); toast((r.ok ? "🛟 " : "😕 ") + r.msg);
@@ -87,7 +132,8 @@ Pages.home = (() => {
       if (window.INFO) $("#hist").textContent = histText(window.INFO);
     },
     show() { if (Date.now() - st.loadedAt > 60000) load(); },
-    info(i) { const h = $("#hist"); if (h) h.textContent = histText(i); },
+    unmount() { clearInterval(st.timer); },
+    info(i) { const h = $("#hist"); if (h) h.textContent = histText(i); adminNote(); },
   };
 })();
 
@@ -158,19 +204,22 @@ SpaceTabs.files = (() => {
   return {
     mount(el) {
       el.innerHTML = `
-        <div class="tools">
-          <select id="root">${((window.INFO && window.INFO.drives) || ["C:\\"]).map((d) => `<option ${d === F.root ? "selected" : ""}>${esc(d)}</option>`).join("")}</select>
-          <select id="min">${[50, 100, 500, 1024].map((m) => `<option value="${m}" ${m === F.min ? "selected" : ""}>maiores que ${m >= 1024 ? "1 GB" : m + " MB"}</option>`).join("")}</select>
+        <div class="card bar2">
+          <div class="fld"><label for="root">Onde procurar</label>
+            <select id="root">${((window.INFO && window.INFO.drives) || ["C:\\"]).map((d) => `<option ${d === F.root ? "selected" : ""}>${esc(d)}</option>`).join("")}</select></div>
+          <div class="fld"><label for="min">Tamanho mínimo</label>
+            <select id="min">${[50, 100, 500, 1024].map((m) => `<option value="${m}" ${m === F.min ? "selected" : ""}>maiores que ${m >= 1024 ? "1 GB" : m + " MB"}</option>`).join("")}</select></div>
           <button class="btn" id="scan">🔍 Procurar</button>
-          <input class="search" id="q" placeholder="🔍  Filtrar por nome ou pasta…" value="${esc(F.query)}">
+          <div class="fld grow"><label for="q">Filtrar resultados</label>
+            <input class="search" id="q" placeholder="Nome ou pasta…" value="${esc(F.query)}"></div>
         </div>
-        <div class="tools">
+        <div class="filters">
           ${[["", "Todos"], ["ok", "Seguros"], ["care", "Cuidado"], ["danger", "Perigo"]].map(([l, t]) => `<button class="chip ${F.level === l ? "on" : ""}" data-l="${l}">${t}</button>`).join("")}
-          <span class="muted">SEGURO = o programa recria • CUIDADO = só você sabe • NÃO APAGUE = pode quebrar o Windows</span>
           <span style="flex:1"></span>
           <button class="btn red" id="delchk" hidden></button>
           <button class="btn" id="delsafe" disabled>🧹 Apagar todos os seguros</button>
         </div>
+        <div class="muted legend">SEGURO = o programa recria • CUIDADO = só você sabe • NÃO APAGUE = pode quebrar o Windows</div>
         <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">
           <div class="head"><span></span><span>RISCO</span><span>ARQUIVO</span><span style="text-align:right">TAMANHO</span><span></span></div>
           <div class="list" id="list"></div>
@@ -208,6 +257,10 @@ Pages.settings = {
     el.innerHTML = `
       <div><h1>Ajustes</h1><div class="muted">Deixe o WebDark com a sua cara. Tudo muda na hora e fica salvo.</div></div>
       <div class="scroll">
+        <h2>🆕 Atualizações</h2>
+        <div class="card" style="padding:16px 18px"><div class="set" style="padding:0"><div class="t"><b>Você está na v${esc((window.INFO || {}).version || "")}</b>
+          <div class="muted">O WebDark confere sozinho a cada 6 horas. Quando tem versão nova, aparece uma faixa no topo e um botão na lateral.</div></div>
+          <button class="ghost" id="updcheck">🔄 Procurar agora</button></div></div>
         <h2>🎨 Aparência</h2>
         <div class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
           <div>Cor de destaque
@@ -237,6 +290,13 @@ Pages.settings = {
     $("#r-blur").oninput = (e) => change({ blurpx: +e.target.value });
     $("#font").onchange = (e) => change({ font: e.target.value });
     $("#reset").onclick = () => change({ ...THEME_DEFAULT });
+    $("#updcheck").onclick = async () => {
+      const b = $("#updcheck"); b.disabled = true; b.textContent = "Procurando…";
+      const r = await api.update_check_now();
+      b.disabled = false; b.textContent = "🔄 Procurar agora";
+      toast(r.found ? `🆕 Versão ${r.version} disponível! Veja a faixa no topo.` : "✅ Você já está na versão mais nova.");
+      if (r.found) UPD_HIDDEN = false, updBanner();
+    };
     sync();
   },
 };

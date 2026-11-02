@@ -10,6 +10,7 @@ import re
 import sys
 import threading
 import time
+import urllib.parse
 import webbrowser
 import winsound
 from dataclasses import asdict
@@ -24,6 +25,7 @@ import overlay
 import risk
 import settings
 import startup
+import netopt
 import system
 import thermal
 import tweaks
@@ -60,7 +62,9 @@ class Api:
         self._found = {}          # caminho -> nível de risco do último escaneamento (só esses podem ir pra lixeira)
         self._appx, self._progs, self._starts, self._procs = {}, {}, {}, {}   # o que a última busca achou, por id
         self._cleaners, self._dups, self._tweaks = {}, {}, {}
-        self._disk_kind, self._restore_done = "", False
+        self._disk_kind, self._restore_done, self._specs = "", False, None
+        self._uq_busy, self._uq_skip, self._uq_cancel = False, threading.Event(), threading.Event()   # fila de desinstalação
+        psutil.cpu_percent(interval=None)                     # a primeira leitura é sempre 0: descarta
         # vigia de temperatura (desligado até o usuário ativar na aba Segurança)
         self._cfg = thermal.load_config()
         self._sensor = thermal.Sensor()
@@ -111,9 +115,26 @@ class Api:
         settings.save(self._prefs)
         return True
 
+    def help_state(self):
+        """Quais passos do plano de otimização você já marcou como feitos."""
+        done = (self._prefs.get("help") or {}).get("done", [])
+        return {"done": [d for d in done if isinstance(d, str)]}
+
+    def help_save(self, state):
+        done = [d for d in (state or {}).get("done", []) if isinstance(d, str) and len(d) < 24]
+        self._prefs["help"] = {"done": done}
+        settings.save(self._prefs)
+        return True
+
     def relaunch_admin(self):
-        if bk.relaunch_as_admin() and self._window is not None:
-            self._window.destroy()
+        """True se o Windows aceitou abrir como administrador (a janela atual fecha logo depois)."""
+        if bk.is_admin():
+            return True
+        if not bk.relaunch_as_admin():                  # o usuário recusou o aviso do Windows
+            return False
+        if self._window is not None:
+            threading.Timer(0.6, self._window.destroy).start()
+        return True
 
     def reveal(self, path):
         bk.open_in_explorer(path)
@@ -127,6 +148,45 @@ class Api:
         def work():
             d = bk.quick_summary(lambda part: self._emit("summary", with_ram(part)))
             self._emit("summary", {**with_ram(d), "done": True})
+
+        self._thread(work)
+
+    def live(self):
+        """Números que mudam (CPU, memória, discos, tempo ligado): a tela pergunta a cada poucos segundos."""
+        vm = psutil.virtual_memory()
+        drives = []
+        for d in bk.fixed_drives():
+            try:
+                total, used, free = bk.disk_usage(d)
+                drives.append({"root": d, "total": total, "used": used, "free": free})
+            except OSError:
+                pass
+        return {"cpu": psutil.cpu_percent(interval=None), "ram_pct": vm.percent, "ram_used": vm.used, "ram_total": vm.total,
+                "uptime": int(time.time() - psutil.boot_time()), "drives": drives}
+
+    def specs(self):
+        """Ficha técnica do PC. O PowerShell leva alguns segundos: roda em thread, guarda o resultado e avisa a tela."""
+        if self._specs:
+            self._emit("specs", self._specs)
+            return
+
+        def work():
+            script = (
+                "$e='SilentlyContinue';"
+                "$cpu=Get-CimInstance Win32_Processor -EA $e|Select -First 1 Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed;"
+                "$gpu=Get-CimInstance Win32_VideoController -EA $e|Select Name;"
+                "$cs=Get-CimInstance Win32_ComputerSystem -EA $e|Select Manufacturer,Model;"
+                "$os=Get-CimInstance Win32_OperatingSystem -EA $e|Select Caption,BuildNumber,OSArchitecture;"
+                "$bb=Get-CimInstance Win32_BaseBoard -EA $e|Select Manufacturer,Product;"
+                "$mem=Get-CimInstance Win32_PhysicalMemory -EA $e|Select Capacity,Speed,SMBIOSMemoryType;"
+                "$dk=Get-PhysicalDisk -EA $e|Select FriendlyName,MediaType,Size;"
+                "[pscustomobject]@{cpu=$cpu;gpu=@($gpu);cs=$cs;os=$os;bb=$bb;mem=@($mem);dk=@($dk)}|ConvertTo-Json -Depth 4 -Compress")
+            try:
+                d = json.loads(bk.ps(script, timeout=60) or "{}")
+            except ValueError:
+                d = {}
+            self._specs = system.format_specs(d)
+            self._emit("specs", self._specs)
 
         self._thread(work)
 
@@ -421,14 +481,24 @@ class Api:
 
     # ------------------------------------------------------------ atualização
     def update_check(self):
+        """Confere o GitHub agora e de novo a cada 6 horas enquanto o programa estiver aberto."""
         def work():
-            up = updater.check()
-            if up:
-                self._update = up
-                self._emit("update:available", {"version": up.version, "size": up.size, "notes": up.notes[:600],
-                                                 "can_self": updater.can_self_update()})
+            self.update_check_now()
+            t = threading.Timer(6 * 3600, self.update_check)
+            t.daemon = True
+            t.start()
 
         self._thread(work)
+
+    def update_check_now(self):
+        """-> {"found": bool, "version": str}. Se achar, avisa a tela (banner no topo e botão na lateral)."""
+        up = updater.check()
+        if not up:
+            return {"found": False, "version": VERSION}
+        self._update = up
+        self._emit("update:available", {"version": up.version, "size": up.size, "notes": up.notes[:600],
+                                         "can_self": updater.can_self_update()})
+        return {"found": True, "version": up.version}
 
     def update_apply(self):
         up = self._update
@@ -440,13 +510,103 @@ class Api:
 
         def work():
             tick = self._throttled("update:progress", 0.15)
-            path = updater.download(up, lambda f: tick({"frac": f}))
-            updater.apply(path)
+            try:
+                path = updater.download(up, lambda f: tick({"frac": f}))
+                updater.apply(path)
+            except Exception as e:
+                self._emit("update:failed", str(e))
+                return
             self._emit("update:progress", {"frac": 1.0, "restart": True})
             time.sleep(0.8)
             self.quit()
 
         self._thread(work)
+        return True
+
+    # ------------------------------------------------------------------ rede
+    def _need_admin(self):
+        return None if bk.is_admin() else {"ok": False, "msg": "Precisa de administrador. Use “Reabrir como administrador”."}
+
+    def net_scan(self):
+        """Adaptadores, Wi-Fi, potência de transmissão, Otimização de Entrega e limites ativos (leva uns 4 s)."""
+        return {**netopt.adapters_info(), "delivery": netopt.delivery_state(), "limits": netopt.qos_list(), "dns_now": netopt.current_dns()}
+
+    def net_dns_test(self):
+        def work():
+            res = netopt.dns_benchmark(lambda n, total: self._emit("net:dns_progress", {"n": n, "total": total}))
+            self._emit("net:dns", res)
+
+        self._thread(work)
+
+    def net_dns_set(self, primary, secondary):
+        if primary not in {s[1] for s in netopt.DNS_SERVERS} or secondary not in {s[2] for s in netopt.DNS_SERVERS} | {""}:
+            return {"ok": False, "msg": "Esse DNS não é da lista."}
+        denied = self._need_admin()
+        if denied:
+            return denied
+        ok, msg = netopt.set_dns(primary, secondary)
+        return {"ok": ok, "msg": msg}
+
+    def net_dns_reset(self):
+        denied = self._need_admin()
+        if denied:
+            return denied
+        ok, msg = netopt.reset_dns()
+        return {"ok": ok, "msg": msg}
+
+    def net_tx_set(self, adapter, keyword, value):
+        denied = self._need_admin()
+        if denied:
+            return denied
+        ok, msg = netopt.set_tx_power(adapter, keyword, value)
+        return {"ok": ok, "msg": msg}
+
+    def net_delivery_set(self, p2p_off, cap):
+        denied = self._need_admin()
+        if denied:
+            return denied
+        ok, msg = netopt.delivery_set(p2p_off, cap)
+        return {"ok": ok, "msg": msg, **netopt.delivery_state()}
+
+    def net_apps(self):
+        return netopt.net_apps()
+
+    def net_limit(self, app, kbytes):
+        denied = self._need_admin()
+        if denied:
+            return denied
+        ok, msg = netopt.qos_limit(app, kbytes)
+        return {"ok": ok, "msg": msg, "limits": netopt.qos_list()}
+
+    def net_unlimit(self, name):
+        denied = self._need_admin()
+        if denied:
+            return denied
+        ok, msg = netopt.qos_remove(name)
+        return {"ok": ok, "msg": msg, "limits": netopt.qos_list()}
+
+    def net_drivers(self):
+        self._thread(lambda: self._emit("net:drivers", netopt.net_drivers()))
+
+    def net_driver_updates(self):
+        self._thread(lambda: self._emit("net:drvupd", netopt.driver_updates()))
+
+    def net_open(self, what):
+        """Abre telas do próprio Windows: drivers opcionais do Windows Update, Localização, Gerenciador de Dispositivos."""
+        target = {"wu": "ms-settings:windowsupdate-optionalupdates", "wupdate": "ms-settings:windowsupdate",
+                  "location": "ms-settings:privacy-location", "devmgr": "devmgmt.msc"}.get(what)
+        if target:
+            os.startfile(target)
+        return bool(target)
+
+    def net_driver_search(self, name):
+        webbrowser.open("https://www.google.com/search?q=" + urllib.parse.quote(f"{name} driver download"))
+
+    def net_repair(self, kind):
+        gens = {"renew": netopt.repair_renew, "reset": netopt.repair_reset, "all": netopt.repair_all}
+        if kind not in gens or (kind != "renew" and not bk.is_admin()):
+            return False
+        self._stream(gens[kind], "net:log", "net:repair_done")
         return True
 
     # ------------------------------------------------------------------ saúde
@@ -768,6 +928,54 @@ class Api:
         if p is None:
             return False
         return bool(bk.run_uninstaller(p.uninstall))
+
+    def progs_uninstall_many(self, ids, mode):
+        """Desinstala vários. mode: "auto" (juntos, mas os instaladores MSI entram em fila), "queue" (um de cada vez)
+        ou "together" (todos abertos de uma vez). Cada desinstalador mostra a própria janela pra você confirmar."""
+        items = [self._progs[i] for i in ids if i in self._progs]
+        if not items or self._uq_busy:
+            return False
+        self._uq_busy = True
+        self._uq_skip.clear()
+        self._uq_cancel.clear()
+        is_msi = lambda p: "msiexec" in p.uninstall.lower()
+        if mode == "queue":
+            par, seq = [], items
+        elif mode == "together":
+            par, seq = items, []
+        else:
+            par, seq = [p for p in items if not is_msi(p)], [p for p in items if is_msi(p)]
+
+        def work():
+            res = {"removed": 0, "kept": 0, "skipped": 0, "failed": 0, "opened": 0, "cancelled": 0}
+            total = len(items)
+            try:
+                for n, p in enumerate(par):
+                    if self._uq_cancel.is_set():
+                        break
+                    self._emit("progs:q", {"i": n, "n": total, "name": p.name, "wait": False})
+                    if bk.run_uninstaller(p.uninstall):
+                        res["opened"] += 1
+                    else:
+                        res["failed"] += 1
+                    time.sleep(0.8)
+                for n, p in enumerate(seq, start=len(par)):
+                    if self._uq_cancel.is_set():
+                        break
+                    self._emit("progs:q", {"i": n, "n": total, "name": p.name, "wait": True})
+                    res[bk.uninstall_and_wait(p.uninstall, p.regkey, self._uq_skip, self._uq_cancel)] += 1
+            finally:
+                self._uq_busy = False
+            self._emit("progs:qdone", res)
+
+        self._thread(work)
+        return True
+
+    def progs_queue_skip(self):
+        self._uq_skip.set()
+
+    def progs_queue_stop(self):
+        self._uq_cancel.set()
 
     # ----------------------------------------------------------- inicialização
     def start_scan(self):

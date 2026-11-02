@@ -37,6 +37,9 @@ def selftest(out_path):
         res["tweaks"] = len(api.tweaks_list())
         res["sec"] = sorted(api.sec_state())[:3]
         res["procs"] = len(api.proc_list()["rows"]) > 5
+        import netopt
+        res["dns"] = len(netopt.DNS_SERVERS)
+        res["help"] = api.help_state()
         import updater
         res["updater"] = updater.check()
         import pystray, psutil  # noqa: F401
@@ -49,9 +52,21 @@ def selftest(out_path):
         f.write(repr(res))
 
 
+def relaunch_test(out_path, reset):
+    """Abre o próprio .exe de novo e sai na hora (como o 'Reabrir como administrador' e a atualização fazem)."""
+    import subprocess
+    import backend
+    env = backend.fresh_start_env() if reset else dict(os.environ)
+    subprocess.Popen([sys.executable, "--selftest", out_path], env=env, stdin=subprocess.DEVNULL,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=backend.CREATE_NO_WINDOW)
+
+
 def main():
     if len(sys.argv) > 2 and sys.argv[1] == "--selftest":
         selftest(sys.argv[2])
+        os._exit(0)
+    if len(sys.argv) > 2 and sys.argv[1] == "--relaunch-test":
+        relaunch_test(sys.argv[2], "--no-reset" not in sys.argv)
         os._exit(0)
     if not single.acquire(wait=12 if "--elevated" in sys.argv else 0):
         single.focus_existing(TITLE)

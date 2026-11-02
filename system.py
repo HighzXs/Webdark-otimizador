@@ -294,3 +294,53 @@ def old_drivers(years=3):
 def check_updates_and_drivers():
     ups, err = pending_updates()
     return {"updates": ups, "error": err, "drivers": old_drivers()}
+
+
+# ---------------------------------------------------------------- ficha técnica (tela Início)
+_RAM_TYPE = {20: "DDR", 21: "DDR2", 24: "DDR3", 26: "DDR4", 34: "DDR5"}
+
+
+def _lst(x):
+    return x if isinstance(x, list) else ([x] if x else [])
+
+
+def _gb(n):
+    return f"{n / 1024 ** 3:.0f} GB" if n >= 1024 ** 3 * 10 else f"{n / 1024 ** 3:.1f} GB"
+
+
+def _uptime(seconds):
+    d, r = divmod(int(seconds), 86400)
+    h, m = divmod(r, 3600)
+    return (f"{d}d " if d else "") + f"{h}h {m // 60}min"
+
+
+def format_specs(d):
+    """Resultado cru do PowerShell -> lista de cartões {icon, k, v, s} para mostrar na tela Início."""
+    cards = []
+    cs, bb, cpu, os_ = d.get("cs") or {}, d.get("bb") or {}, d.get("cpu") or {}, d.get("os") or {}
+    model = " ".join(x for x in (cs.get("Manufacturer"), cs.get("Model")) if x).strip()
+    board = " ".join(x for x in (bb.get("Manufacturer"), bb.get("Product")) if x).strip()
+    if model or board:
+        cards.append({"icon": "🖥", "k": "Computador", "v": model or board, "s": ("Placa-mãe: " + board) if model and board else ""})
+    if cpu.get("Name"):
+        ghz = (cpu.get("MaxClockSpeed") or 0) / 1000
+        cards.append({"icon": "🧠", "k": "Processador", "v": re.sub(r"\s+", " ", cpu["Name"]).strip(),
+                      "s": f"{cpu.get('NumberOfCores', '?')} núcleos • {cpu.get('NumberOfLogicalProcessors', '?')} threads" + (f" • até {ghz:.1f} GHz" if ghz else "")})
+    gpus = [g.get("Name", "") for g in _lst(d.get("gpu")) if g.get("Name") and "virtual" not in g["Name"].lower() and "remote" not in g["Name"].lower()]
+    if gpus:
+        cards.append({"icon": "🎞", "k": "Placa de vídeo", "v": " + ".join(gpus), "s": ""})
+    mem = _lst(d.get("mem"))
+    if mem:
+        total = sum(int(m.get("Capacity") or 0) for m in mem)
+        kind = _RAM_TYPE.get(mem[0].get("SMBIOSMemoryType"), "")
+        speed = mem[0].get("Speed")
+        cards.append({"icon": "🧩", "k": "Memória RAM", "v": f"{_gb(total)} {kind}".strip() + (f" • {speed} MHz" if speed else ""),
+                      "s": f"{len(mem)} pente(s)"})
+    if os_.get("Caption"):
+        cards.append({"icon": "🪟", "k": "Sistema", "v": os_["Caption"].replace("Microsoft ", ""),
+                      "s": f"build {os_.get('BuildNumber', '?')} • {os_.get('OSArchitecture', '')}"})
+    disks = _lst(d.get("dk"))
+    if disks:
+        cards.append({"icon": "💽", "k": "Discos", "v": " • ".join(f"{x.get('FriendlyName', '?')} ({_gb(int(x.get('Size') or 0))})" for x in disks),
+                      "s": " • ".join(sorted({str(x.get("MediaType") or "?") for x in disks}))})
+    return {"cards": cards, "boot": time.time() - psutil.boot_time()}

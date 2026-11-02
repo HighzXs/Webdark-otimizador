@@ -106,5 +106,6 @@ def apply(new_path):
     )
     with open(bat, "w", encoding="cp850", errors="replace") as f:
         f.write(script)
-    subprocess.Popen(["cmd", "/c", bat], creationflags=0x08000000, stdin=subprocess.DEVNULL,
+    from backend import fresh_start_env
+    subprocess.Popen(["cmd", "/c", bat], creationflags=0x08000000, stdin=subprocess.DEVNULL, env=fresh_start_env(),
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -199,22 +199,29 @@ on("confirm_close", async () => {
   };
 })();
 
-// =============================================== INÍCIO: aviso de atualização
-let UPDATE = null;
-function updBanner() {
-  const page = $(".page");
-  if (!page || current !== "home") return;
-  let b = $("#updbar");
-  if (!UPDATE) { if (b) b.remove(); return; }
-  if (!b) { b = document.createElement("div"); b.id = "updbar"; b.className = "card"; b.style.cssText = "padding:12px 18px;display:flex;gap:14px;align-items:center;border-color:var(--accent)"; page.insertBefore(b, page.children[1]); }
-  b.innerHTML = `<b style="flex:1">🆕 Versão ${esc(UPDATE.version)} disponível (você está na ${esc((window.INFO || {}).version || "")})</b>
-    <span class="muted" id="updtxt"></span><button class="ghost" id="updlater">Depois</button><button class="btn" id="updgo">${UPDATE.can_self ? "⬇ Atualizar agora" : "⬇ Abrir página de download"}</button>`;
-  $("#updlater").onclick = () => { UPDATE = null; updBanner(); };
-  $("#updgo").onclick = async () => {
-    if (UPDATE.can_self && !await confirmBox({ title: `Atualizar para a versão ${UPDATE.version}?`, body: `Vou baixar ${fmt(UPDATE.size)} e reiniciar o programa.\n\n${UPDATE.notes}`, ok: "Atualizar" })) return;
-    $("#updgo").disabled = true; busy(1); api.update_apply();
-  };
+// ================================================= aviso de atualização (aparece em qualquer tela)
+let UPDATE = null, UPD_HIDDEN = false, UPD_BUSY = false;
+async function updStart() {
+  if (UPD_BUSY || !UPDATE) return;
+  if (UPDATE.can_self && !await confirmBox({ title: `Atualizar para a versão ${UPDATE.version}?`, body: `Vou baixar ${fmt(UPDATE.size)} e reiniciar o programa.\n\n${UPDATE.notes}`, ok: "Atualizar" })) return;
+  UPD_BUSY = true; busy(1); updBanner(); api.update_apply();
 }
+function updBanner() {
+  const bar = $("#updbar"), side = $("#updside");
+  if (!UPDATE) { bar.hidden = true; side.hidden = true; return; }
+  const cur = (window.INFO || {}).version || "";
+  const first = String(UPDATE.notes || "").split(/\r?\n/).map((l) => l.replace(/^[#\-*\s]+/, "").trim()).find(Boolean) || "";
+  side.hidden = false;
+  side.disabled = UPD_BUSY;
+  side.querySelector("span").textContent = UPD_BUSY ? "Atualizando…" : `Atualizar para v${UPDATE.version}`;
+  bar.hidden = UPD_HIDDEN && !UPD_BUSY;
+  bar.innerHTML = `<div class="msg"><b>🆕 Versão ${esc(UPDATE.version)} disponível!</b><div>Você está na v${esc(cur)}.${first ? " Novidades: " + esc(first) : ""}</div></div>
+    <span id="updtxt"></span>${UPD_BUSY ? "" : '<button class="later" id="updlater">Depois</button>'}
+    <button class="go" id="updgo" ${UPD_BUSY ? "disabled" : ""}>${UPDATE.can_self ? "⬇ Atualizar agora" : "⬇ Abrir página de download"}</button>`;
+  $("#updgo").onclick = updStart;
+  if (!UPD_BUSY) $("#updlater").onclick = () => { UPD_HIDDEN = true; updBanner(); toast("Ok. O botão “Atualizar” continua na lateral."); };
+}
+$("#updside").onclick = updStart;
 on("update:available", (d) => { UPDATE = d; updBanner(); });
 on("update:progress", (d) => { const t = $("#updtxt"); if (t) t.textContent = d.restart ? "Reiniciando…" : `Baixando… ${Math.round(d.frac * 100)}%`; });
-(() => { const orig = Pages.home.mount; Pages.home.mount = function (el) { orig.call(this, el); updBanner(); }; })();
+on("update:failed", (msg) => { UPD_BUSY = false; busy(-1); updBanner(); toast("⚠ Não consegui atualizar: " + msg); });

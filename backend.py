@@ -7,9 +7,12 @@ import os
 import re
 import shutil
 import subprocess
+import time
 import winreg
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+
+import psutil
 
 CREATE_NO_WINDOW = 0x08000000
 FILE_ATTRIBUTE_REPARSE_POINT = 0x400
@@ -23,6 +26,14 @@ def is_admin():
         return False
 
 
+def fresh_start_env(base=None):
+    """Ambiente para abrir o .exe de novo. Sem isto o PyInstaller acha que o novo processo é "filho" do atual,
+    reaproveita a pasta temporária dele (que some quando ele fecha) e dá "Security validation failure"."""
+    env = dict(os.environ if base is None else base)
+    env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+    return env
+
+
 def relaunch_as_admin():
     """Reabre o programa pedindo UAC. Retorna True se o pedido foi enviado."""
     import sys
@@ -31,7 +42,15 @@ def relaunch_as_admin():
     else:
         exe = sys.executable
         params = f'"{os.path.abspath(sys.argv[0])}" --elevated'
-    r = ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, params, None, 1)
+    old = os.environ.get("PYINSTALLER_RESET_ENVIRONMENT")
+    os.environ["PYINSTALLER_RESET_ENVIRONMENT"] = "1"          # o ShellExecute passa o ambiente deste processo pro novo
+    try:
+        r = ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, params, None, 1)
+    finally:
+        if old is None:
+            os.environ.pop("PYINSTALLER_RESET_ENVIRONMENT", None)
+        else:
+            os.environ["PYINSTALLER_RESET_ENVIRONMENT"] = old
     return r > 32
 
 
@@ -642,6 +661,7 @@ class Program:
     uninstall: str
     location: str = ""
     suspect: bool = False
+    regkey: tuple = ()          # (hive, caminho no registro): se a chave some, o programa foi mesmo desinstalado
 
 
 def list_programs():
@@ -658,7 +678,8 @@ def list_programs():
             continue
         for i in range(winreg.QueryInfoKey(key)[0]):
             try:
-                sk = winreg.OpenKey(key, winreg.EnumKey(key, i))
+                sub_name = winreg.EnumKey(key, i)
+                sk = winreg.OpenKey(key, sub_name)
             except OSError:
                 continue
 
@@ -685,9 +706,17 @@ def list_programs():
                 size = 0
             found[low] = Program(
                 name, str(val("Publisher")), size, uninst, str(val("InstallLocation")),
-                any(s in low for s in SUSPECT),
+                any(s in low for s in SUSPECT), (hive, sub + "\\" + sub_name),
             )
     return sorted(found.values(), key=lambda p: (not p.suspect, -p.size, p.name.lower()))
+
+
+def regkey_exists(regkey):
+    try:
+        winreg.CloseKey(winreg.OpenKey(regkey[0], regkey[1]))
+        return True
+    except OSError:
+        return False
 
 
 def _split_command(cmd):
@@ -703,10 +732,84 @@ def _split_command(cmd):
     return parts[0], parts[1] if len(parts) > 1 else ""
 
 
+def launch_uninstaller(cmd):
+    """Abre o desinstalador e devolve o handle do processo (para esperar ele terminar), ou None se não abriu.
+    Handle 0 = abriu, mas o Windows não deu o processo (acontece com alguns instaladores)."""
+    from ctypes import wintypes
+
+    class SEI(ctypes.Structure):
+        _fields_ = [("cbSize", wintypes.DWORD), ("fMask", ctypes.c_ulong), ("hwnd", wintypes.HWND), ("lpVerb", wintypes.LPCWSTR),
+                    ("lpFile", wintypes.LPCWSTR), ("lpParameters", wintypes.LPCWSTR), ("lpDirectory", wintypes.LPCWSTR),
+                    ("nShow", ctypes.c_int), ("hInstApp", wintypes.HINSTANCE), ("lpIDList", ctypes.c_void_p),
+                    ("lpClass", wintypes.LPCWSTR), ("hkeyClass", wintypes.HKEY), ("dwHotKey", wintypes.DWORD),
+                    ("hIcon", wintypes.HANDLE), ("hProcess", wintypes.HANDLE)]
+
+    exe, args = _split_command(cmd)
+    if os.path.isabs(exe) and not os.path.exists(exe):          # desinstalador apagado: nada de janela de erro do Windows
+        return None
+    ctypes.windll.ole32.CoInitialize(None)
+    for verb in ("open", "runas"):
+        info = SEI()
+        info.cbSize = ctypes.sizeof(SEI)
+        info.fMask = 0x40 | 0x100 | 0x8000          # NOCLOSEPROCESS | NOASYNC | NO_UI (o próprio instalador mostra os avisos)
+        info.lpVerb, info.lpFile, info.lpParameters, info.nShow = verb, exe, args or None, 1
+        if ctypes.windll.shell32.ShellExecuteExW(ctypes.byref(info)):
+            return info.hProcess or 0
+    return None
+
+
+def _descendants(pid):
+    """Processos que descendem de `pid`, mesmo se `pid` já fechou (o instalador some e deixa um filho rodando)."""
+    kids, found, todo = {}, set(), [pid]
+    for p in psutil.process_iter(["pid", "ppid"]):
+        kids.setdefault(p.info["ppid"], []).append(p.info["pid"])
+    while todo:
+        for c in kids.get(todo.pop(), []):
+            if c not in found:
+                found.add(c)
+                todo.append(c)
+    return found
+
+
+def uninstall_and_wait(cmd, regkey, skip, cancel, max_wait=1800):
+    """Abre o desinstalador e espera ele terminar de verdade.
+    -> "removed" (sumiu da lista de programas), "kept" (terminou mas o programa continua), "skipped", "cancelled" ou "failed".
+    `skip` e `cancel` são threading.Event: o usuário pula esta etapa ou para a fila inteira."""
+    from ctypes import wintypes
+    k = ctypes.WinDLL("kernel32", use_last_error=True)
+    k.WaitForSingleObject.argtypes, k.WaitForSingleObject.restype = [wintypes.HANDLE, wintypes.DWORD], wintypes.DWORD
+    k.GetProcessId.argtypes, k.GetProcessId.restype = [wintypes.HANDLE], wintypes.DWORD
+    k.CloseHandle.argtypes = [wintypes.HANDLE]
+    h = launch_uninstaller(cmd)
+    if h is None:
+        return "failed"
+    pid = k.GetProcessId(h) if h else 0
+    start, quiet = time.time(), 0
+    try:
+        while time.time() - start < max_wait:
+            if cancel.is_set():
+                return "cancelled"
+            if skip.is_set():
+                skip.clear()
+                return "skipped"
+            alive = (h and k.WaitForSingleObject(h, 0) == 0x102) or bool(pid and _descendants(pid))
+            quiet = 0 if alive else quiet + 1
+            gone = regkey and not regkey_exists(regkey)
+            if (quiet >= 4 and gone) or quiet >= 14:          # 2 s sem nada rodando e o programa sumiu, ou 7 s sem nada rodando
+                break
+            time.sleep(0.5)
+    finally:
+        if h:
+            k.CloseHandle(h)
+    return "removed" if regkey and not regkey_exists(regkey) else "kept"
+
+
 def run_uninstaller(cmd):
     """Abre o desinstalador pelo ShellExecute (funciona no .exe sem console e pede administrador se precisar)."""
     import ctypes
     exe, args = _split_command(cmd)
+    if os.path.isabs(exe) and not os.path.exists(exe):
+        return False
     shell = ctypes.windll.shell32.ShellExecuteW
     for verb in ("open", "runas"):
         if shell(None, verb, exe, args or None, None, 1) > 32:
