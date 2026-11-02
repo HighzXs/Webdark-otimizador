@@ -32,7 +32,7 @@ Mapa do código para agentes (e pessoas): diz **onde fica cada coisa** para alte
 | 🎨 Ajustes | [[Ajustes]] | (sem abas) |
 
 ## Backend (Python)
-[[webapi.py]] · [[webapp.py]] · [[backend.py]] · [[thermal.py]] · [[netopt.py]] · [[mem.py]] · [[svcopt.py]] · [[system.py]] · [[health.py]] · [[startup.py]] · [[cpu.py]] · [[tweaks.py]] · [[risk.py]] · [[updater.py]] · [[Utilitários]] (settings, single, tray, overlay, version)
+[[webapi.py]] · [[webapp.py]] · [[backend.py]] · [[thermal.py]] · [[netopt.py]] · [[mem.py]] · [[svcopt.py]] · [[system.py]] · [[health.py]] · [[startup.py]] · [[cpu.py]] · [[tweaks.py]] · [[risk.py]] · [[updater.py]] · [[installer.py]] · [[Utilitários]] (settings, single, tray, overlay, version)
 
 ## Frontend (web/)
 [[core.js]] · [[CSS]] · [[index.html]]
