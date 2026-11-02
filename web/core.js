@@ -12,7 +12,7 @@ window.__emit = (event, payload) => (handlers[event] || []).slice().forEach((fn)
 // sem isso, "#list" (nome repetido nas telas) pegava a lista da tela errada e desenhava por cima.
 // "current" é a tela (ou aba) aberta agora.
 const OWNER = { bloat: "bloat", progs: "progs", start: "start", proc: "proc", scan: "files", dirs: "dirs", dups: "dups", dl: "dl",
-  cl: "clean", clean: "home", summary: "home", health: "health", sys: "perf", perf: "perf", sec: "security", net: "net" };
+  cl: "clean", clean: "home", summary: "home", health: "health", sys: "perf", perf: "perf", sec: "security", net: "net", mem: "mem" };
 let current = null, curPage = null, INTAB = false;
 const on = (event, fn) => {
   const owner = OWNER[event.split(":")[0]] || (event === "summary" ? "home" : null);
@@ -147,7 +147,7 @@ function makeGroup(title, sub, tabs) {
     body.innerHTML = "";
     const t = impl(k);
     INTAB = true;
-    try { if (t.mount) t.mount(body); } finally { INTAB = false; }
+    try { if (t.mount) t.mount(body); } catch (e) { console.error("mount", k, e); } finally { INTAB = false; }   // se o mount quebrar, o show ainda roda e recarrega a aba
     if (t.show) t.show(body);
     if (typeof helpRefresh === "function") helpRefresh();
   }

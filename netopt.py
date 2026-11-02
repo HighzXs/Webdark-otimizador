@@ -79,8 +79,10 @@ def current_dns():
         "Select @{n='index';e={$_.InterfaceIndex}},@{n='name';e={$_.InterfaceAlias}},@{n='servers';e={@($_.ServerAddresses)}})|ConvertTo-Json -Compress")
     cur = _as_list(bk.ps(script, timeout=30))
     for c in cur:
-        if isinstance(c.get("servers"), str):
-            c["servers"] = [c["servers"]]
+        s = c.get("servers")
+        if isinstance(s, dict):                      # o PowerShell 5.1 embrulha o array: {"value": [...], "Count": n}
+            s = s.get("value")
+        c["servers"] = [s] if isinstance(s, str) else list(s or [])
     return cur
 
 

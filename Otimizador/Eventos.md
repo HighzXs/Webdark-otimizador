@@ -20,6 +20,7 @@ Emitidos em [[webapi.py]] por `self._emit(...)`. Escutados com `on("evento", fn)
 | `health:*` | health | `health:disks`, `health:diag`, `health:upd`, `health:log`, `health:repair_done` | pages4.js |
 | `sys:*`, `perf:*` | perf | `sys:state`, `sys:applied`, `perf:clock`, `perf:log`, `perf:opt_done` | pages4.js |
 | `sec:*` | security | `sec:cfg`, `sec:tick` | pages5.js |
+| `mem:*` | mem | `mem:deep`, `mem:auto` | pagesmem.js ([[Velocidade]]) |
 | `net:*` | net | `net:dns`, `net:dns_progress`, `net:drivers`, `net:drvupd`, `net:log`, `net:repair_done` | pagesnet.js |
 | (sem dono) | global | `error`, `confirm_close`, `update:available`, `update:progress`, `update:failed` | core.js / pages5.js |
 

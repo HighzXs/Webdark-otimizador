@@ -1,6 +1,6 @@
 // Tela Rede (aba de Velocidade): Wi-Fi e adaptadores, melhor DNS, Otimização de Entrega, limite por programa, drivers e reparos.
 Pages.net = (() => {
-  const S = { scan: null, loading: false, dns: null, dnsBusy: false, dnsProg: "", apps: null, drivers: null, drvUpd: null, drvBusy: false, log: "", repairing: false };
+  const S = { scan: null, loading: false, loadAt: 0, dns: null, dnsBusy: false, dnsProg: "", apps: null, drivers: null, drvUpd: null, drvBusy: false, log: "", repairing: false };
   const alive = () => current === "net";
   const isAdmin = () => !!(window.INFO && window.INFO.admin);
   const ok = (r) => { if (r && r.ok === false) { toast("⚠ " + r.msg); return false; } return true; };
@@ -29,9 +29,9 @@ Pages.net = (() => {
         <div class="meter" style="margin:8px 0"><i style="width:${w.signal}%;background:${col}"></i></div>
         <div class="muted">Velocidade de conexão: ${w.rx} Mbps recebendo • ${w.tx} Mbps enviando${w.radio ? " • " + esc(w.radio) : ""}</div></div>`;
     } else if (w && w.status === "blocked") {
-      html += `<div class="card adminnote" style="margin-top:10px"><div class="t"><b>O Windows está escondendo o sinal do Wi-Fi</b>
-        <div class="muted">Desde o Windows 11 mais novo, ler o sinal exige a Localização ligada nas configurações de privacidade (o app não usa a sua localização).</div></div>
-        <button class="btn" id="n-loc">Abrir Localização</button></div>`;
+      // sem Localização o Windows não entrega a % do sinal (nem como administrador); a velocidade do adaptador, acima, continua valendo
+      html += `<div class="set" style="margin-top:10px;padding:8px 0"><div class="t muted">O Windows não mostra a % do sinal do Wi-Fi sem a Localização ligada (o app não usa a sua localização). Sem ela, use a velocidade de conexão de cada adaptador, na lista acima: quanto mais perto do máximo do seu Wi-Fi, melhor o sinal.</div>
+        <button class="ghost" id="n-loc">Abrir Localização</button></div>`;
     }
     if (d.txpower.length) {
       html += '<div style="margin-top:12px"><b>Potência de transmissão do Wi-Fi</b>' + d.txpower.map((t, i) => `<div class="set" style="padding:8px 0">
@@ -57,7 +57,7 @@ Pages.net = (() => {
   function paintDns() {
     const box = $("#n-dns");
     if (!box) return;
-    const now = S.scan && S.scan.dns_now && S.scan.dns_now.length ? S.scan.dns_now.map((c) => `${esc(c.name)}: ${esc((c.servers || []).join(", ") || "automático")}`).join(" • ") : "…";
+    const now = S.scan && S.scan.dns_now && S.scan.dns_now.length ? S.scan.dns_now.map((c) => `${esc(c.name)}: ${esc([].concat((c.servers && c.servers.value) || c.servers || []).join(", ") || "automático")}`).join(" • ") : "…";
     let html = `<div class="muted">DNS é a “agenda telefônica” da internet: quanto mais rápido ele responde, mais rápido os sites começam a abrir. Seu DNS agora: ${now}</div>
       <div class="tools" style="margin-top:12px"><button class="btn" id="n-dnstest" ${S.dnsBusy ? "disabled" : ""}>${S.dnsBusy ? esc(S.dnsProg || "Testando…") : "⚡ Testar e achar o melhor"}</button>
         <button class="ghost" id="n-dnsreset">↩ Voltar ao automático${adminTag()}</button></div>`;
@@ -96,7 +96,7 @@ Pages.net = (() => {
   function paintDelivery() {
     const box = $("#n-do");
     if (!box || !S.scan) return;
-    const d = S.scan.delivery;
+    const d = S.scan.delivery || { p2p_off: false, cap: 0 };
     box.innerHTML = `<div class="set" style="padding:0"><div class="t"><b>Não repassar atualizações para outros PCs</b>${adminTag()}
         <div class="muted">Por padrão o Windows pode usar a sua internet pra mandar pedaços de atualização pra outros computadores. Desligar economiza sua banda de upload. As atualizações continuam chegando normalmente da Microsoft.</div></div>
         <div class="sw ${d.p2p_off ? "on" : ""}" id="n-p2p"></div></div>
@@ -204,15 +204,31 @@ Pages.net = (() => {
   on("net:repair_done", () => { S.repairing = false; busy(-1); S.log += "\n✅ Terminou.\n"; paintRepair(); });
 
   // ----------------------------------------------------------------- tela
+  // cada seção isolada: uma falha não pode derrubar as outras
+  const paintAll = () => {
+    for (const paint of [paintWifi, paintDns, paintDelivery, paintLimits, paintDrivers, paintRepair]) {
+      try { paint(); } catch (e) { console.error(paint.name, e); }
+    }
+  };
   async function load() {
-    if (S.loading) return;
-    S.loading = true; busy(1);
-    const d = await api.net_scan();
-    S.loading = false; busy(-1);
-    S.scan = d;
-    if (!alive()) return;
-    paintWifi(); paintDns(); paintDelivery(); paintLimits();
+    if (S.loading && Date.now() - S.loadAt < 45000) return;      // 45 s sem resposta: a leitura anterior travou, tenta de novo
+    if (!S.loading) busy(1);
+    S.loading = true; S.loadAt = Date.now();
+    try {
+      S.scan = await api.net_scan();                              // o cache (S.scan) só é trocado se a leitura der certo
+    } catch (e) {
+      console.error("net_scan", e);
+    } finally {
+      S.loading = false; busy(-1);
+    }
+    if (alive()) paintAll();
   }
+  // Ao voltar de minimizado o WebView pode ter pausado: repinta do cache na hora e confere se está atualizado
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden || !alive() || !$("#n-wifi")) return;
+    paintAll();
+    if (!S.scan || Date.now() - (S.loadAt || 0) > 30000) load();
+  });
 
   return {
     mount(el) {
@@ -223,7 +239,7 @@ Pages.net = (() => {
         ${card("n-lim", "🐢 Limitar programas em segundo plano", "")}
         ${card("n-drv", "🧩 Drivers de rede", "")}
         ${card("n-fix", "🔧 Reparar a rede", "")}</div>`;
-      paintWifi(); paintDns(); paintDelivery(); paintLimits(); paintDrivers(); paintRepair();
+      paintAll();
     },
     show() {
       load();

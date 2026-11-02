@@ -16,7 +16,7 @@ Pages.apps = makeGroup("Aplicativos", "Tire o que vem de fábrica no Windows e d
 Pages.speed = makeGroup("Velocidade", "Plano de energia, o que liga com o Windows e a sua conexão. Tudo dá pra desfazer.", [
   ["perf", "⚡ Desempenho", Pages.perf],
   ["start", "🚀 Inicialização", Pages.start],
-].concat(Pages.net ? [["net", "🌐 Rede", Pages.net]] : []));
+].concat(Pages.net ? [["net", "🌐 Rede", Pages.net]] : []).concat(Pages.mem ? [["mem", "🧠 Memória", Pages.mem]] : []));
 
 Pages.protect = makeGroup("Saúde e proteção", "Veja se o PC está bem, vigie a temperatura e ache quem está pesando.", [
   ["health", "🩺 Saúde", Pages.health],

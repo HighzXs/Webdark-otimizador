@@ -16,5 +16,6 @@ Scripts em ordem (importa!): `core.js` → `pages.js` → `pages2.js` → `pages
 | pages4.js | Saúde, Desempenho |
 | pages5.js | Segurança, segundo plano, banner de atualização |
 | pagesnet.js | Rede |
+| pagesmem.js | Memória |
 | pages6.js | grupos: [[Espaço e limpeza]], [[Aplicativos]], [[Velocidade]], [[Saúde e proteção]] |
 | pageshelp.js | [[Ajuda]] |

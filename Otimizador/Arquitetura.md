@@ -12,7 +12,7 @@ webapp.py  ──cria janela──►  web/index.html  (core.js + pages*.js)
 webapi.py: class Api  ◄───────────┘
     │  _emit("evento", dados) ──► window.__emit ──► on("evento", fn) no JS
     ▼
-módulos: backend, thermal, netopt, system, health, startup, cpu, tweaks, risk, updater
+módulos: backend, thermal, netopt, mem, svcopt, system, health, startup, cpu, tweaks, risk, updater
 ```
 
 ## Regras que importam
@@ -32,6 +32,8 @@ módulos: backend, thermal, netopt, system, health, startup, cpu, tweaks, risk, 
 | `preferences.json` | settings.py ([[Utilitários]]) | tema, ajuda, segundo plano, minutos |
 | `settings.json` | [[thermal.py]] | config do vigia de temperatura / curva |
 | `history.json` | [[backend.py]] | histórico do quanto foi limpo |
+| `services.json` | [[svcopt.py]] | como cada serviço estava antes de desligar |
+| `frozen.json` | [[mem.py]] | programas congelados agora (para descongelar se o app morrer) |
 
 ## Dependências
 pywebview, pythonnet, psutil, pystray, Pillow, send2trash. Quase tudo do Windows passa por PowerShell (`backend.ps` / `ps_stream`), `powercfg`, registro (`winreg`) e ctypes.

@@ -50,6 +50,15 @@ const TIPS = {
     ["Limitar programas", "Limita o que um programa envia. Pode causar instabilidade: use com cuidado.", "#n-lim"],
     ["Drivers de rede", "Mostra a idade do driver do Wi-Fi e do cabo e leva você ao Windows Update pra baixar drivers.", "#n-drv"],
     ["Reparar a rede", "Os comandos clássicos de reparo (ipconfig e netsh). Os mais fortes pedem reiniciar o PC.", "#n-fix"]]],
+  mem: ["Memória", "Libere RAM e ajuste como o Windows usa a memória.", [
+    ["Lista de espera", "Cache de arquivos na RAM. A limpeza suave é segura até com jogo aberto; a completa pode engasgar por uns segundos.", "#m-sb-soft"],
+    ["Liberar RAM de todos", "Devolve a RAM que navegadores, Discord e Spotify guardam sem usar. O programa que você está usando não é tocado.", "#m-trimall"],
+    ["Congelar", "Para um programa de vez enquanto você joga (a RAM volta na hora). Descongela sozinho no prazo ou ao fechar o WebDark.", "#m-apps"],
+    ["Congelar sozinho ao jogar", "Detecta jogo em tela cheia e congela só os programas que você marcou, menos quem está em chamada. Descongela quando o jogo sai.", "#m-auto"],
+    ["Serviços que dá pra desligar", "Lista com o risco e o que quebra em cada um. Dá pra religar com o mesmo interruptor.", "#m-svcs"],
+    ["Arquivo de paginação", "Mostra uma sugestão pela sua RAM. Precisa reiniciar. Dá pra voltar ao automático.", "#m-pfgo"],
+    ["Agrupar serviços", "Junta serviços em menos processos svchost e economiza RAM. Precisa reiniciar.", "#m-svcgo"],
+    ["SysMain", "Pré-carrega programas na RAM. Em SSD pode desligar; em HD deixe ligado.", "#m-sysmain"]]],
   health: ["Saúde", "Veja se o disco está bom e conserte problemas do Windows.", [
     ["Saúde do disco", "Mostra se o disco avisa que vai falhar. Se aparecer alerta, faça backup antes de qualquer coisa.", "#hd"],
     ["Diagnóstico geral", "Confere sinais de problema no Windows.", "#rd"],
