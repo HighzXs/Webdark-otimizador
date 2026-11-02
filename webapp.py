@@ -10,6 +10,7 @@ import threading
 
 import webview
 
+import installer
 import single
 from webapi import TITLE, Api
 
@@ -68,6 +69,13 @@ def main():
     if len(sys.argv) > 2 and sys.argv[1] == "--relaunch-test":
         relaunch_test(sys.argv[2], "--no-reset" not in sys.argv)
         os._exit(0)
+    if "--uninstall" in sys.argv:
+        installer.uninstall()
+        os._exit(0)
+    if installer.is_frozen() and not installer.is_installed_copy() and "--elevated" not in sys.argv:
+        import settings
+        if installer.offer(settings.load()):   # .exe solto: oferece instalar (menu Iniciar) e abre a cópia instalada
+            os._exit(0)
     if not single.acquire(wait=12 if "--elevated" in sys.argv else 0):
         single.focus_existing(TITLE)
         return
@@ -84,6 +92,8 @@ def main():
         if api._prefs.get("background"):
             api._tray_start()                  # modo segundo plano ligado: volta pra bandeja
         threading.Timer(8.0, api.update_check).start()
+        if installer.is_frozen() and installer.is_installed_copy():
+            threading.Thread(target=installer.register, daemon=True).start()   # atalho e versão em dia após atualizar
 
     webview.start(on_start, gui="edgechromium")
     api._shutdown()

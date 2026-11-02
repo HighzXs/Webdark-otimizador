@@ -4,7 +4,7 @@ arquivo: webapp.py
 ---
 # webapp.py — ponto de entrada
 
-- `main()`: trata `--selftest` / `--relaunch-test`, garante instância única (`single.acquire`; espera 12 s se veio `--elevated`), cria a janela pywebview (1200×820, mín. 980×640) com `js_api=Api()`.
+- `main()`: trata `--selftest` / `--relaunch-test` / `--uninstall`, oferece instalar se for .exe solto ([[installer.py]]), garante instância única (`single.acquire`; espera 12 s se veio `--elevated`), cria a janela pywebview (1200×820, mín. 980×640) com `js_api=Api()`.
 - `on_start()`: barra de título escura (`dark_titlebar`), `api.make_overlay()`, bandeja se o segundo plano estiver ligado, checagem de atualização após 8 s.
 - `resource(nome)`: caminho de arquivo empacotado (`sys._MEIPASS` no .exe).
 - `python webapp.py second` abre na segunda tela (testes).

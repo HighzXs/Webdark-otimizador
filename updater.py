@@ -6,6 +6,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -57,7 +58,11 @@ def check():
 
 def download(up, progress=None):
     """Baixa o .exe novo para a pasta temporária e confere o SHA-256 quando o GitHub informa. -> caminho"""
-    folder = tempfile.mkdtemp(prefix="FaxinaVarzea-update-")
+    # Não usar tempfile.mkdtemp: no Python 3.13+ ele cria a pasta só para SISTEMA/Administradores/dono. O .exe
+    # herdava essa permissão e, baixado pelo app como administrador, o Explorer sem admin não abria mais
+    # ("O Windows não pode acessar o dispositivo, caminho ou arquivo especificado").
+    folder = os.path.join(tempfile.gettempdir(), f"WebDark-update-{os.getpid()}-{int(time.time())}")
+    os.makedirs(folder, exist_ok=True)
     dest = os.path.join(folder, "FaxinaVarzea.exe.novo")
     h = hashlib.sha256()
     req = urllib.request.Request(up.url, headers=_HEADERS)
@@ -96,10 +101,12 @@ def apply(new_path):
         ":retry\r\n"
         "set /a n+=1\r\n"
         "ping 127.0.0.1 -n 2 >nul\r\n"
-        f'move /y "{new_path}" "{exe}" >nul 2>&1 && goto ok\r\n'
+        # copy (e não move): grava por cima do .exe antigo, que mantém as permissões da pasta dele
+        f'copy /b /y "{new_path}" "{exe}" >nul 2>&1 && goto ok\r\n'
         "if %n% lss 40 goto retry\r\n"
         "exit /b 1\r\n"
         ":ok\r\n"
+        f'del "{new_path}" >nul 2>&1\r\n'
         f'start "" "{exe}"\r\n'
         "ping 127.0.0.1 -n 9 >nul\r\n"                      # o app novo confere quem o abriu: este script não pode sumir antes
         '(goto) 2>nul & del "%~f0"\r\n'
