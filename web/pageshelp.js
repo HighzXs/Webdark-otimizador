@@ -54,6 +54,10 @@ const TIPS = {
     ["Congelar", "Para um programa de vez enquanto você joga: ele não usa mais o processador. Descongela sozinho no prazo ou ao fechar o WebDark.", "#m-apps"],
     ["Congelar sozinho ao jogar", "Detecta jogo em tela cheia e congela só os programas que você marcou, menos quem está em chamada. Descongela quando o jogo sai.", "#m-auto"],
     ["Arquivo de paginação", "Mostra se está no automático (o melhor). Se estiver fixo, dá pra voltar ao automático.", "#m-pf"]]],
+  game: ["Jogos", "O que costuma estar errado e tira FPS sem você saber.", [
+    ["Placa de vídeo certa", "Em notebook com duas placas, marca os jogos pra usar a dedicada. Dá pra desfazer.", "#g-list"],
+    ["Monitor e driver", "Avisa se a tela está abaixo da taxa máxima ou se o driver de vídeo está velho.", "#g-list"],
+    ["Verificar de novo", "Roda a verificação outra vez depois de mudar algo.", "#g-again"]]],
   health: ["Saúde", "Veja se o disco está bom e conserte problemas do Windows.", [
     ["Saúde do disco", "Mostra se o disco avisa que vai falhar. Se aparecer alerta, faça backup antes de qualquer coisa.", "#hd"],
     ["Diagnóstico geral", "Confere sinais de problema no Windows.", "#rd"],
@@ -209,7 +213,7 @@ function helpToggle(open) {
 (() => {
   const stage = document.querySelector(".stage");
   const fab = document.createElement("button");
-  fab.id = "helpfab"; fab.title = "Dicas sobre esta tela"; fab.textContent = "💡";
+  fab.id = "helpfab"; fab.title = "Dicas sobre esta tela"; fab.innerHTML = ICON("help");
   fab.onclick = () => helpToggle();
   const panel = document.createElement("div");
   panel.id = "helppanel"; panel.hidden = true;

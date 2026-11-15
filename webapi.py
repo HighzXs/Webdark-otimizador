@@ -20,6 +20,7 @@ import webview
 
 import backend as bk
 import cpu
+import gamecheck
 import health
 import mem
 import overlay
@@ -733,6 +734,69 @@ class Api:
         except Exception:
             r = None
         return {"mhz": r[0], "util": r[1]} if r else None
+
+    # ---------------------------------------------------------------- jogos
+    def game_scan(self):
+        """Verificação para jogos (uns 3 s, PowerShell + varredura das pastas de jogos). Responde no evento game:scan."""
+        def work():
+            d = gamecheck.scan()
+            self._games = d.pop("games")
+            d["game_names"] = [g["name"] for g in self._games]
+            d["gpu_pref_written"] = len(self._prefs.get("gpu_pref_written", []))
+            self._emit("game:scan", d)
+
+        self._thread(work)
+
+    def game_gpu_apply(self):
+        written = gamecheck.gpu_pref_apply(getattr(self, "_games", []))
+        self._prefs["gpu_pref_written"] = sorted(set(self._prefs.get("gpu_pref_written", []) + written))
+        settings.save(self._prefs)
+        return {"ok": True, "msg": f"{len(written)} executáveis de jogos marcados para a placa dedicada. Vale da próxima vez que o jogo abrir."
+                if written else "Os jogos já estavam marcados."}
+
+    def game_gpu_add(self):
+        """Escolher um .exe de jogo à mão (Riot, Xbox, jogo pirata, emulador…)."""
+        picked = self._window.create_file_dialog(webview.OPEN_DIALOG, file_types=("Programas (*.exe)",)) if self._window else None
+        if not picked:
+            return {"ok": False, "msg": "Nenhum arquivo escolhido."}
+        written = gamecheck.gpu_pref_apply([{"name": "", "exes": [picked[0]]}])
+        self._prefs["gpu_pref_written"] = sorted(set(self._prefs.get("gpu_pref_written", []) + written))
+        settings.save(self._prefs)
+        name = os.path.basename(picked[0])
+        return {"ok": True, "msg": f"{name} vai usar a placa dedicada." if written else f"{name} já tinha uma escolha de placa no Windows."}
+
+    def game_gpu_undo(self):
+        n = gamecheck.gpu_pref_undo(self._prefs.get("gpu_pref_written", []))
+        self._prefs["gpu_pref_written"] = []
+        settings.save(self._prefs)
+        return {"ok": True, "msg": f"{n} jogos voltaram à escolha automática do Windows."}
+
+    def game_refresh_set(self, device, hz):
+        ok, msg = gamecheck.set_refresh(device, int(hz))
+        return {"ok": ok, "msg": msg}
+
+    def game_hags_set(self, on):
+        denied = self._need_admin()
+        if denied:
+            return denied
+        ok, msg = gamecheck.hags_set(bool(on))
+        return {"ok": ok, "msg": msg}
+
+    def game_mode_enable(self):
+        ok, msg = gamecheck.game_mode_enable()
+        return {"ok": ok, "msg": msg}
+
+    def game_open(self, what):
+        """Telas do Windows e sites de driver dos fabricantes (só os da lista)."""
+        target = {"coreisolation": "windowsdefender://coreisolation", "graphics": "ms-settings:display-advancedgraphics",
+                  "display": "ms-settings:display-advanced"}.get(what)
+        if target:
+            os.startfile(target)
+            return True
+        if what in [u for _, u in gamecheck._VENDOR.values()]:
+            webbrowser.open(what)
+            return True
+        return False
 
     # --------------------------------------------------------------- memória
     def mem_scan(self):

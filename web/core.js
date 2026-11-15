@@ -12,7 +12,7 @@ window.__emit = (event, payload) => (handlers[event] || []).slice().forEach((fn)
 // sem isso, "#list" (nome repetido nas telas) pegava a lista da tela errada e desenhava por cima.
 // "current" é a tela (ou aba) aberta agora.
 const OWNER = { bloat: "bloat", progs: "progs", start: "start", proc: "proc", scan: "files", dirs: "dirs", dups: "dups", dl: "dl",
-  cl: "clean", clean: "home", summary: "home", health: "health", sys: "perf", perf: "perf", sec: "security", net: "net", mem: "mem" };
+  cl: "clean", clean: "home", summary: "home", health: "health", sys: "perf", perf: "perf", sec: "security", net: "net", mem: "mem", game: "game" };
 let current = null, curPage = null, INTAB = false;
 const on = (event, fn) => {
   const owner = OWNER[event.split(":")[0]] || (event === "summary" ? "home" : null);
@@ -115,9 +115,25 @@ function saveTheme() { clearTimeout(saveTimer); saveTimer = setTimeout(() => api
 
 // ---- páginas e rotas
 const Pages = {};
+// ---- ícones: SVG de traço único (16px, 1.6), herdam a cor do texto
+const ICON = (() => {
+  const P = {
+    home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
+    space: '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/>',
+    apps: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+    speed: '<path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z"/>',
+    protect: '<path d="M12 3 5 6v5.5c0 4.4 2.9 8.2 7 9.5 4.1-1.3 7-5.1 7-9.5V6l-7-3Z"/><path d="M9 12h2l1-2.5 2 5 1-2.5h1"/>',
+    help: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>',
+    refresh: '<path d="M20 11a8 8 0 0 0-14.6-4.5L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.6 4.5L20 16"/><path d="M20 21v-5h-5"/>',
+    shield: '<path d="M12 3 5 6v5.5c0 4.4 2.9 8.2 7 9.5 4.1-1.3 7-5.1 7-9.5V6l-7-3Z"/>',
+  };
+  return (k, cls = "ico") => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[k] || ""}</svg>`;
+})();
+
 const NAV = [
-  ["home", "🏠", "Início"], ["space", "🧹", "Espaço e limpeza"], ["apps", "📦", "Aplicativos"], ["speed", "⚡", "Velocidade"],
-  ["protect", "🩺", "Saúde e proteção"], ["help", "💡", "Ajuda"], ["settings", "🎨", "Ajustes"],
+  ["home", "Início"], ["space", "Espaço e limpeza"], ["apps", "Aplicativos"], ["speed", "Velocidade"],
+  ["protect", "Saúde e proteção"], ["help", "Ajuda"], ["settings", "Ajustes"],
 ];
 function go(id, tab) {
   const prev = curPage && Pages[curPage];
@@ -166,8 +182,8 @@ function makeGroup(title, sub, tabs) {
 }
 
 async function boot() {
-  $("#nav").innerHTML = NAV.map(([id, icon, label]) =>
-    `<button data-id="${id}">${icon} ${label}${Pages[id] ? "" : '<span class="soon">em breve</span>'}</button>`).join("");
+  $("#nav").innerHTML = NAV.map(([id, label]) =>
+    `<button data-id="${id}">${ICON(id)}<span>${label}</span>${Pages[id] ? "" : '<span class="soon">em breve</span>'}</button>`).join("");
   $("#nav").onclick = (e) => { const b = e.target.closest("button"); if (b) go(b.dataset.id); };
   go("home");
   const info = await api.info();

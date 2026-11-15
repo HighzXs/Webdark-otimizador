@@ -26,13 +26,13 @@ Mapa do código para agentes (e pessoas): diz **onde fica cada coisa** para alte
 | 🏠 Início | [[Início]] | (sem abas) |
 | 🧹 Espaço e limpeza | [[Espaço e limpeza]] | Limpeza, Pastas, Arquivos grandes, Duplicados, Downloads antigos |
 | 📦 Aplicativos | [[Aplicativos]] | Bloatware, Programas instalados |
-| ⚡ Velocidade | [[Velocidade]] | Desempenho, Inicialização, Rede, Memória |
+| ⚡ Velocidade | [[Velocidade]] | Desempenho, Inicialização, Rede, Memória, Jogos |
 | 🩺 Saúde e proteção | [[Saúde e proteção]] | Saúde, Segurança (temperatura), Processos |
 | 💡 Ajuda | [[Ajuda]] | (sem abas) |
 | 🎨 Ajustes | [[Ajustes]] | (sem abas) |
 
 ## Backend (Python)
-[[webapi.py]] · [[webapp.py]] · [[backend.py]] · [[thermal.py]] · [[netopt.py]] · [[mem.py]] · [[svcopt.py]] · [[system.py]] · [[health.py]] · [[startup.py]] · [[cpu.py]] · [[tweaks.py]] · [[risk.py]] · [[updater.py]] · [[installer.py]] · [[Utilitários]] (settings, single, tray, overlay, version)
+[[webapi.py]] · [[webapp.py]] · [[backend.py]] · [[thermal.py]] · [[netopt.py]] · [[mem.py]] · [[svcopt.py]] · [[system.py]] · [[health.py]] · [[startup.py]] · [[cpu.py]] · [[tweaks.py]] · [[risk.py]] · [[updater.py]] · [[installer.py]] · [[gamecheck.py]] · [[Utilitários]] (settings, single, tray, overlay, version)
 
 ## Frontend (web/)
 [[core.js]] · [[CSS]] · [[index.html]]

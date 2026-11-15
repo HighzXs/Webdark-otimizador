@@ -11,7 +11,8 @@ arquivo: web/core.js
 | Python | `ready`, `api` (Proxy → `window.pywebview.api`) |
 | Avisos | `toast`, `adminPrompt`, `confirmBox`, `choiceBox`, `inputBox`, `busy` |
 | Tema | `THEME_DEFAULT`, `applyTheme`, `saveTheme` |
-| Rotas | `Pages`, **`NAV`** (menu), `go(id, tab)`, `makeGroup(title, sub, tabs)` |
+| Ícones | `ICON(nome, classe)`: SVG de traço único (home, space, apps, speed, protect, help, settings, refresh, shield). **Não usar emoji como ícone** em menu, abas, títulos e botões novos |
+| Rotas | `Pages`, **`NAV`** (menu: `[id, rótulo]`, o ícone vem de `ICON(id)`), `go(id, tab)`, `makeGroup(title, sub, tabs)` |
 | Início | `boot()`: monta menu, `api.info()` → `window.INFO` (admin, versão, drives, tema), botão de admin |
 
 Ver [[Arquitetura]], [[Eventos]], [[Receitas]].

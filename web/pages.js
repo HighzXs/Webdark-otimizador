@@ -3,8 +3,8 @@ const SpaceTabs = {};
 
 Pages._soon = (id) => ({
   mount(el) {
-    const [, icon, label] = NAV.find((n) => n[0] === id);
-    el.innerHTML = `<div class="soon-card card"><div style="font-size:44px">${icon}</div><h1 style="margin:8px 0">${label}</h1>
+    const [, label] = NAV.find((n) => n[0] === id);
+    el.innerHTML = `<div class="soon-card card">${ICON(id, "ico big")}<h1 style="margin:8px 0">${label}</h1>
       <p class="muted">Essa aba ainda está no app antigo (Faxina Várzea) e vem para o WebDark nas próximas etapas.</p></div>`;
   },
 });

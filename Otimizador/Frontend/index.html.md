@@ -6,7 +6,7 @@ arquivo: web/index.html
 
 Esqueleto: `aside` (logo, `#ver`, `#nav`, `#updside`, `#adminBtn`, `#busy`) + `.stage` (`#updbar`, `#main`) + `#toast` + `#modal`.
 
-Scripts em ordem (importa!): `core.js` → `pages.js` → `pages2.js` → `pages3.js` → `pages4.js` → `pages5.js` → `pagesnet.js` → `pages6.js` (grupos com abas) → `pageshelp.js` → `boot()`.
+Scripts em ordem (importa!): `core.js` → `pages.js` → `pages2.js` → `pages3.js` → `pages4.js` → `pages5.js` → `pagesnet.js` → `pagesmem.js` → `pagesgame.js` → `pages6.js` (grupos com abas) → `pageshelp.js` → `boot()`.
 
 | Arquivo | Telas |
 |---|---|
@@ -17,5 +17,6 @@ Scripts em ordem (importa!): `core.js` → `pages.js` → `pages2.js` → `pages
 | pages5.js | Segurança, segundo plano, banner de atualização |
 | pagesnet.js | Rede |
 | pagesmem.js | Memória |
+| pagesgame.js | Jogos |
 | pages6.js | grupos: [[Espaço e limpeza]], [[Aplicativos]], [[Velocidade]], [[Saúde e proteção]] |
 | pageshelp.js | [[Ajuda]] |

@@ -31,7 +31,7 @@ Pages.mem = (() => {
     let html = `<div class="muted">Navegadores e launchers (Chrome, Edge, Opera, Discord, Spotify, Steam) costumam guardar GBs na RAM mesmo parados. Aqui você baixa a prioridade deles ou os congela enquanto joga. O que você está usando agora nunca é tocado.</div>
       <div class="tools" style="margin-top:10px"><label class="muted">Congelar por <select id="m-fmin">${[15, 30, 60, 120].map((m) => `<option value="${m}" ${m === S.freezeMin ? "selected" : ""}>${m} min</option>`).join("")}</select></label>
         ${anyFrozen ? '<button class="mini red" id="m-unfreezeall">▶ Descongelar tudo</button>' : ""}
-        <button class="ghost" id="m-regroups">🔄 Atualizar</button></div>`;
+        <button class="ghost" id="m-regroups">${ICON("refresh")}Atualizar</button></div>`;
     html += autoBlock();
     if (!g.length) html += '<div class="muted" style="margin-top:10px">Nenhum desses programas está aberto agora.</div>';
     html += g.map((x) => `<div class="row slim" style="--cols:1fr 120px auto"><div style="min-width:0"><div class="name">${esc(x.label)} <span class="muted">• ${esc(x.kind)} • ${x.count} ${x.count === 1 ? "processo" : "processos"}</span></div>
@@ -62,7 +62,7 @@ Pages.mem = (() => {
     const a = S.auto;
     if (!a) return "";
     const skipped = Object.entries(a.skipped || {}).map(([id, why]) => `${esc((a.options.find((o) => o.id === id) || {}).label || id)}: ${esc(why)}`);
-    return `<div class="card adminnote" style="margin:12px 0"><div class="t"><b>🎮 Congelar sozinho quando eu jogar</b>
+    return `<div class="card autonote" style="margin:12px 0"><div class="t"><b>Congelar sozinho quando eu jogar</b>
         <div class="muted">Quando um jogo estiver em tela cheia, o WebDark congela os programas marcados abaixo e descongela sozinho quando o jogo sai da frente. Quem estiver usando microfone ou câmera (chamada de voz ou vídeo) nunca é congelado, e se você voltar pra um programa congelado ele acorda na hora.</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px">${a.options.map((o) => `<label class="muted" title="${esc("Ao congelar: " + o.warn)}"><input type="checkbox" data-aug="${o.id}" ${a.groups.includes(o.id) ? "checked" : ""}> ${esc(o.label)}</label>`).join("")}</div>
         <div class="muted" style="margin-top:6px">⚠ Marque só o que você não usa no jogo. Discord congelado = sem chat de voz; Spotify = sem música; navegador = sem música/vídeo de abas.${a.on ? `<br><b>${a.game ? "🎮 Jogo detectado: " + esc(a.game) : "Vigiando… nenhum jogo em tela cheia agora."}</b>${skipped.length ? " • Pulei: " + skipped.join("; ") : ""}` : ""}</div></div>
@@ -118,7 +118,7 @@ Pages.mem = (() => {
       lg.services.map((s) => `Serviço desligado: ${esc(s.title)} (era ${esc(s.was)})`));
     box.hidden = !items.length;
     if (!items.length) return;
-    box.innerHTML = `<h2>↩ Desfazer ajustes antigos</h2><div class="card" style="padding:14px 18px">
+    box.innerHTML = `<h2>Desfazer ajustes antigos</h2><div class="card" style="padding:14px 18px">
       <div class="muted">Versões antigas do WebDark mudavam isto. Esses ajustes saíram porque não deixam o PC mais rápido e podem tirar recursos do Windows. Recomendo voltar ao padrão.</div>
       <ul class="muted" style="margin:8px 0 0 18px">${items.map((t) => `<li>${t}</li>`).join("")}</ul>
       <div class="tools" style="margin-top:10px"><button class="btn" id="m-undo">Voltar ao padrão${adminTag()}</button></div></div>`;
@@ -145,9 +145,9 @@ Pages.mem = (() => {
   return {
     mount(el) {
       el.innerHTML = head("Memória", "Veja o uso da RAM e congele o que pesa enquanto você joga. Tudo dá pra desfazer.") + `<div class="scroll">
-        ${card("m-ram", "🧠 Memória agora", "")}
-        ${card("m-apps", "🌐 Programas em segundo plano", "")}
-        ${card("m-pf", "💾 Arquivo de paginação", "")}
+        ${card("m-ram", "Memória agora", "")}
+        ${card("m-apps", "Programas em segundo plano", "")}
+        ${card("m-pf", "Arquivo de paginação", "")}
         <div id="m-legacy" hidden></div></div>`;
       paintRam(); paintApps(); paintPf(); paintLegacy();
     },
