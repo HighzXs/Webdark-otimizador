@@ -16,4 +16,5 @@ Antes de criar classe nova, procure uma parecida aqui.
 - Rótulos em sentence case (nada de caixa-alta espaçada). Números em `tabular-nums`.
 - `.scroll` tem 72px de folga embaixo para o botão de dicas (`#helpfab`) nunca cobrir conteúdo.
 - Fundo com brilho, desfoque e fonte continuam escolha do usuário em Ajustes (`--glow`, `--blurpx`, `--font`).
+- Sem emoji nem símbolo-ícone na interface (nem nos textos que o Python manda): status = ponto colorido (`.gc-dot`), fechar = `ICON("close")`. Ficam só "→" no texto, "✓" da caixa de seleção e a assinatura do rodapé.
 - Aba Jogos: `.gc-*` (lista em painel, ponto de status). Bloco neutro: `.autonote`; `.adminnote` é só para aviso de administrador.

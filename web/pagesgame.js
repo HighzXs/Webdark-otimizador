@@ -4,7 +4,7 @@ Pages.game = (() => {
   const S = { d: null, loading: false };
   const alive = () => current === "game";
   const isAdmin = () => !!(window.INFO && window.INFO.admin);
-  const ok = (r) => { if (r && r.ok === false) { toast("⚠ " + r.msg); return false; } return true; };
+  const ok = (r) => { if (r && r.ok === false) { toast("" + r.msg); return false; } return true; };
   const adminTag = () => (isAdmin() ? "" : ' <span class="tag q">PRECISA DE ADMIN</span>');
   const act = async (fn) => { busy(1); try { return await fn(); } finally { busy(-1); } };
   // nível de cada item: a cor só aparece no pontinho de status (vermelho = tira FPS, amarelo = vale ver)
@@ -26,7 +26,7 @@ Pages.game = (() => {
          <br>Jogo de fora do Steam/Epic (Riot, Xbox, emulador)? Adicione o .exe à mão.`,
         `${none || all ? "" : '<button class="btn" id="g-gpu">Usar a placa dedicada nos jogos</button>'}
          <button class="ghost" id="g-gpuadd">Adicionar jogo (.exe)</button>
-         ${d.gpu_pref_written ? '<button class="ghost" id="g-gpuundo">↩ Desfazer</button>' : ""}
+         ${d.gpu_pref_written ? '<button class="ghost" id="g-gpuundo">Desfazer</button>' : ""}
          <button class="ghost" data-open="graphics">Abrir no Windows</button>`));
     }
     // driver de vídeo
@@ -77,7 +77,7 @@ Pages.game = (() => {
     if (!box) return;
     if (!S.d) { box.innerHTML = '<div class="muted">Verificando placa de vídeo, monitor, memória e jogos instalados…</div>'; return; }
     box.innerHTML = itemsHtml(S.d);
-    const run = (fn) => async () => { const r = await act(fn); if (ok(r)) toast("✅ " + r.msg); load(); };
+    const run = (fn) => async () => { const r = await act(fn); if (ok(r)) toast("" + r.msg); load(); };
     const on1 = (id, fn) => { const b = $(id, box); if (b) b.onclick = fn; };
     on1("#g-gpu", run(() => api.game_gpu_apply()));
     on1("#g-gpuadd", run(() => api.game_gpu_add()));
@@ -106,7 +106,7 @@ Pages.game = (() => {
         m.hidden = true; m.onclick = null;
         await act(() => api.game_refresh_set(dev, +was));
         toast(`Voltei para ${was} Hz.`);
-      } else toast("✅ " + r.msg);
+      } else toast("" + r.msg);
       load();
     }));
   }

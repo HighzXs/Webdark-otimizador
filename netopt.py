@@ -354,21 +354,21 @@ def driver_updates():
 # ------------------------------------------------------------- comandos de reparo
 def repair_renew():
     """Renova a conexão: solta o IP, pede outro e limpa o cache de nomes."""
-    yield "▶ ipconfig /release  (a internet cai por um instante)"
+    yield "ipconfig /release  (a internet cai por um instante)"
     yield from health.stream_cmd(["ipconfig", "/release"])
-    yield "▶ ipconfig /renew"
+    yield "ipconfig /renew"
     yield from health.stream_cmd(["ipconfig", "/renew"])
-    yield "▶ ipconfig /flushdns"
+    yield "ipconfig /flushdns"
     yield from health.stream_cmd(["ipconfig", "/flushdns"])
 
 
 def repair_reset():
     """Zera a pilha de rede do Windows. Precisa reiniciar o PC depois."""
-    yield "▶ netsh int ip reset"
+    yield "netsh int ip reset"
     yield from health.stream_cmd(["netsh", "int", "ip", "reset"])
-    yield "▶ netsh winsock reset"
+    yield "netsh winsock reset"
     yield from health.stream_cmd(["netsh", "winsock", "reset"])
-    yield "✅ Pronto. REINICIE o PC para valer."
+    yield "Pronto. REINICIE o PC para valer."
 
 
 def repair_all():

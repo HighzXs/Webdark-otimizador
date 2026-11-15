@@ -1,6 +1,6 @@
 // Telas: Bloatware, Programas, Inicialização, Processos.
 
-const LEVEL_TITLE = { lixo: "🗑 Lixo — recomendo remover", opcional: "🤔 Opcionais — você decide", outro: "⚠ Outros apps — só remova se souber o que é" };
+const LEVEL_TITLE = { lixo: "Lixo — recomendo remover", opcional: "Opcionais — você decide", outro: "Outros apps — só remova se souber o que é" };
 const head = (title, sub) => (INTAB ? `<div class="muted tabsub">${sub}</div>` : `<div><h1>${title}</h1><div class="muted">${sub}</div></div>`);
 
 // ================================================================= BLOATWARE
@@ -11,7 +11,7 @@ Pages.bloat = (() => {
     const box = $("#list");
     if (!box) return;
     if (S.loading) box.innerHTML = '<div class="empty">Procurando apps instalados… (pode levar uns segundos)</div>';
-    else if (!S.items.length) box.innerHTML = '<div class="empty">Nenhum bloatware encontrado. 🎉</div>';
+    else if (!S.items.length) box.innerHTML = '<div class="empty">Nenhum bloatware encontrado. </div>';
     else {
       let html = "", last = null;
       for (const it of S.items) {
@@ -38,13 +38,13 @@ Pages.bloat = (() => {
     paint();
   });
   on("bloat:log", (l) => { S.log += l + "\n"; paint(); });
-  on("bloat:done", (n) => { S.removing = false; busy(-1); S.log += `\n✅ ${n} app(s) removidos.\n`; toast(`✅ ${n} app(s) removidos`); load(); });
+  on("bloat:done", (n) => { S.removing = false; busy(-1); S.log += `\n${n} app(s) removidos.\n`; toast(`${n} app(s) removidos`); load(); });
 
   return {
     mount(el) {
       el.innerHTML = head("Bloatware", "Apps que vêm com o Windows e quase ninguém usa. Dá pra reinstalar depois pela Microsoft Store.") + `
         <div class="tools"><button class="chip" id="rec">Marcar recomendados</button><button class="chip" id="none">Desmarcar tudo</button>
-          <span class="muted" id="n"></span><span style="flex:1"></span><button class="btn red" id="rm">🔥 Remover marcados</button></div>
+          <span class="muted" id="n"></span><span style="flex:1"></span><button class="btn red" id="rm">Remover marcados</button></div>
         <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><div class="list" id="list"></div></div>
         <div class="logbox" id="log"></div>`;
       $("#rec").onclick = () => { S.checked = new Set(S.items.filter((i) => i.level === "lixo").map((i) => i.id)); paint(); };
@@ -88,10 +88,10 @@ Pages.progs = (() => {
     if (!b) return;
     b.hidden = !n;
     b.disabled = !!S.q;
-    b.textContent = `🗑 Desinstalar ${n} marcado(s)`;
+    b.textContent = `Desinstalar ${n} marcado(s)`;
     const sus = S.items.filter((p) => p.suspect);
     $("#marksus").hidden = !sus.length;
-    $("#marksus").textContent = sus.every((p) => S.checked.has(p.id)) ? "Desmarcar suspeitos" : `⚠ Marcar os ${sus.length} suspeitos`;
+    $("#marksus").textContent = sus.every((p) => S.checked.has(p.id)) ? "Desmarcar suspeitos" : `Marcar os ${sus.length} suspeitos`;
     $("#cnt").textContent = `${view().length} programa(s)` + (n ? ` • ${n} marcado(s)` : "");
   }
   function paintQueue() {
@@ -100,10 +100,10 @@ Pages.progs = (() => {
     box.hidden = !S.q;
     if (!S.q) return;
     const q = S.q;
-    box.innerHTML = `<div style="flex:1;min-width:0"><b>🗑 Desinstalando ${q.i + 1} de ${q.n}: ${esc(q.name)}</b>
+    box.innerHTML = `<div style="flex:1;min-width:0"><b>Desinstalando ${q.i + 1} de ${q.n}: ${esc(q.name)}</b>
       <div class="muted">${q.wait ? "Confirme na janela do desinstalador. Quando ele terminar, abro o próximo sozinho." : "Abrindo o desinstalador… confirme na janela dele."}</div>
       <div class="bar" style="margin:8px 0 0"><i style="width:${Math.round((q.i / q.n) * 100)}%"></i></div></div>
-      ${q.wait ? '<button class="ghost" id="uqskip">⏭ Pular este</button>' : ""}<button class="ghost" id="uqstop">⏹ Parar a fila</button>`;
+      ${q.wait ? '<button class="ghost" id="uqskip">Pular este</button>' : ""}<button class="ghost" id="uqstop">Parar a fila</button>`;
     if (q.wait) $("#uqskip").onclick = () => api.progs_queue_skip();
     $("#uqstop").onclick = () => api.progs_queue_stop();
   }
@@ -114,7 +114,7 @@ Pages.progs = (() => {
     box.innerHTML = S.loading ? '<div class="empty">Lendo programas…</div>' : !rows.length ? '<div class="empty">Nada aqui.</div>' :
       rows.map((p) => `<div class="row slim" data-id="${esc(p.id)}" style="--cols:${COLS}">
         <div class="cb ${S.checked.has(p.id) ? "on" : ""}" data-a="check" title="Marcar para desinstalar vários de uma vez"></div>
-        <div style="min-width:0"><div class="name" style="${p.suspect ? "color:#fbbf24" : ""}">${p.suspect ? "⚠ " : ""}${esc(p.name)}</div></div>
+        <div style="min-width:0"><div class="name" style="${p.suspect ? "color:#fbbf24" : ""}">${esc(p.name)}</div></div>
         <div class="why">${esc(p.publisher || "—")}</div><div class="size">${p.size ? fmt(p.size) : "—"}</div>
         <div class="acts"><button class="mini red" data-a="un">Desinstalar</button></div></div>`).join("");
     bar();
@@ -130,7 +130,7 @@ Pages.progs = (() => {
     if (r.kept) parts.push(`${r.kept} continua(m) instalado(s)`);
     if (r.skipped) parts.push(`${r.skipped} pulado(s)`);
     if (r.failed) parts.push(`${r.failed} não abriu`);
-    toast("🗑 " + (parts.join(" • ") || "Fila parada") + (r.opened ? ". Depois clique em Atualizar." : ""));
+    toast("" + (parts.join(" • ") || "Fila parada") + (r.opened ? ". Depois clique em Atualizar." : ""));
     paintQueue();
     if (!r.opened) load(); else bar();
   });
@@ -148,22 +148,22 @@ Pages.progs = (() => {
       ] });
     if (!mode) return;
     busy(1);
-    if (!await api.progs_uninstall_many(list.map((p) => p.id), mode)) { busy(-1); toast("⚠ Já tem uma desinstalação em andamento."); }
+    if (!await api.progs_uninstall_many(list.map((p) => p.id), mode)) { busy(-1); toast("Já tem uma desinstalação em andamento."); }
   }
 
   return {
     mount(el) {
-      el.innerHTML = head("Programas instalados", "Os suspeitos (testes de antivírus, barras de ferramentas) aparecem primeiro com ⚠. Marque vários pra desinstalar de uma vez.") + `
+      el.innerHTML = head("Programas instalados", "Os suspeitos (testes de antivírus, barras de ferramentas) aparecem primeiro com . Marque vários pra desinstalar de uma vez.") + `
         <div class="card bar2">
           <div class="fld grow"><label for="q">Buscar</label><input class="search" id="q" placeholder="Programa ou editora…" value="${esc(S.query)}"></div>
           <div class="fld"><label for="sort">Ordem</label><select id="sort"><option value="default">Suspeitos e maiores primeiro</option><option value="size">Maiores primeiro</option><option value="name">Nome (A–Z)</option></select></div>
-          <button class="ghost" id="re">🔄 Atualizar</button>
+          <button class="ghost" id="re">Atualizar</button>
           <button class="ghost" id="marksus" hidden></button>
           <button class="btn red" id="unmany" hidden></button>
         </div>
         <div class="card queue" id="uq" hidden></div>
         <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">
-          <div class="head" style="--cols:${COLS}"><span></span><span>PROGRAMA</span><span>EDITORA</span><span style="text-align:right">TAMANHO</span><span></span></div>
+          <div class="head" style="--cols:${COLS}"><span></span><span>Programa</span><span>Editora</span><span style="text-align:right">Tamanho</span><span></span></div>
           <div class="list" id="list"></div></div><div class="muted" id="cnt"></div>`;
       $("#sort").value = S.sort;
       $("#q").oninput = (e) => { S.query = e.target.value; paint(); };
@@ -187,7 +187,7 @@ Pages.progs = (() => {
           const p = S.items.find((x) => x.id === id);
           if (await confirmBox({ title: "Desinstalar?", body: `Abrir o desinstalador de:\n\n${p.name}`, ok: "Abrir desinstalador", danger: true })) {
             const ok = await api.prog_uninstall(p.id);
-            toast(ok ? "Desinstalador aberto. Depois clique em Atualizar." : "⚠ Não consegui abrir o desinstalador desse programa.");
+            toast(ok ? "Desinstalador aberto. Depois clique em Atualizar." : "Não consegui abrir o desinstalador desse programa.");
           }
         }
       };
@@ -200,8 +200,8 @@ Pages.progs = (() => {
 // ============================================================== INICIALIZAÇÃO
 Pages.start = (() => {
   const S = { items: [], loaded: false, loading: false, busyIds: new Set(), sel: null };
-  const SEC = { run: "📋 Programas que abrem com o Windows (o Gerenciador de Tarefas também mostra)", task: "🕵 Tarefas agendadas — o Gerenciador de Tarefas NÃO mostra",
-    service: "⚙ Serviços — o Gerenciador de Tarefas NÃO mostra (só na aba Serviços)" };
+  const SEC = { run: "Programas que abrem com o Windows (o Gerenciador de Tarefas também mostra)", task: "Tarefas agendadas — o Gerenciador de Tarefas NÃO mostra",
+    service: "Serviços — o Gerenciador de Tarefas NÃO mostra (só na aba Serviços)" };
   const sec = (k) => (k === "folder" ? "run" : k);
   const BADGE = { off: ["off", "PODE DESLIGAR"], keep: ["keep", "MANTENHA"], "?": ["q", "DEPENDE"] };
 
@@ -227,7 +227,7 @@ Pages.start = (() => {
   }
   const load = () => { S.loading = true; busy(1); paint(); api.start_scan(); };
   on("start:list", (items) => { S.items = items; S.loading = false; S.loaded = true; busy(-1); paint(); });
-  on("start:bulk", (d) => { busy(-1); toast(d.failed.length ? `⚠ Não consegui desligar: ${d.failed.slice(0, 3).join(", ")}` : `✅ ${d.done} item(ns) desligados`); load(); });
+  on("start:bulk", (d) => { busy(-1); toast(d.failed.length ? `Não consegui desligar: ${d.failed.slice(0, 3).join(", ")}` : `${d.done} item(ns) desligados`); load(); });
 
   async function toggle(it) {
     if (S.busyIds.has(it.id)) return;
@@ -237,15 +237,15 @@ Pages.start = (() => {
     S.busyIds.add(it.id); it.enabled = want; paint();
     const r = await api.start_set(it.id, want);
     S.busyIds.delete(it.id);
-    if (!r.ok) { it.enabled = !want; toast("⚠ Não consegui mudar: " + r.msg); }
+    if (!r.ok) { it.enabled = !want; toast("Não consegui mudar: " + r.msg); }
     paint();
   }
   return {
     mount(el) {
       el.innerHTML = head("Inicialização", "Tudo que liga junto com o Windows, inclusive o que o Gerenciador de Tarefas esconde. Menos coisa ligando = PC liga mais rápido.") + `
-        <div class="tools"><button class="ghost" id="re">🔄 Atualizar</button><span class="muted" id="cnt"></span><span style="flex:1"></span>
+        <div class="tools"><button class="ghost" id="re">Atualizar</button><span class="muted" id="cnt"></span><span style="flex:1"></span>
           <button class="btn" id="rec">Desligar os recomendados</button></div>
-        ${window.INFO && !window.INFO.admin ? '<div class="muted" style="color:#fbbf24">⚠ Sem administrador, só dá pra mexer nos itens do seu usuário. Tarefas e serviços precisam de admin.</div>' : ""}
+        ${window.INFO && !window.INFO.admin ? '<div class="muted" style="color:#fbbf24">Sem administrador, só dá pra mexer nos itens do seu usuário. Tarefas e serviços precisam de admin.</div>' : ""}
         <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><div class="list" id="list"></div></div>
         <div class="card" style="padding:12px 16px;min-height:86px;user-select:text" id="detail"></div>`;
       $("#re").onclick = load;
@@ -293,8 +293,8 @@ Pages.proc = (() => {
       const c = el.children;
       c[0].textContent = r.name + (r.count > 1 ? `  ×${r.count}` : "");
       c[1].textContent = fmt(r.ram); c[2].textContent = r.cpu.toFixed(1) + "%";
-      c[3].textContent = r.protected ? "🔒 Windows" : "";
-      const b = c[4].firstChild; b.disabled = r.protected; b.textContent = r.protected ? "🔒" : "Fechar";
+      c[3].textContent = r.protected ? "Windows" : "";
+      const b = c[4].firstChild; b.disabled = r.protected; b.textContent = r.protected ? "" : "Fechar";
       el.classList.toggle("sel", S.sel === r.key);
       if (list.children[i] !== el) list.insertBefore(el, list.children[i] || null);   // só mexe se mudou de lugar
     });
@@ -309,10 +309,10 @@ Pages.proc = (() => {
     mount(el) {
       el.innerHTML = head("Processos", "Quem está pesando agora. Fechar um programa perde o que não foi salvo nele. Os do Windows ficam trancados.") + `
         <div class="tools"><span class="muted">Ordenar por:</span><button class="chip on" data-s="ram">RAM</button><button class="chip" data-s="cpu">CPU</button>
-          <button class="ghost" id="re">🔄 Atualizar</button><span class="muted">Atualizar sozinho</span><div class="sw on" id="auto"></div></div>
+          <button class="ghost" id="re">Atualizar</button><span class="muted">Atualizar sozinho</span><div class="sw on" id="auto"></div></div>
         <div class="muted" id="sum"></div>
         <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">
-          <div class="head" style="--cols:1fr 110px 80px 120px 110px"><span>PROGRAMA</span><span style="text-align:right">RAM</span><span style="text-align:right">CPU</span><span>ESTADO</span><span></span></div>
+          <div class="head" style="--cols:1fr 110px 80px 120px 110px"><span>Programa</span><span style="text-align:right">Ram</span><span style="text-align:right">Cpu</span><span>Estado</span><span></span></div>
           <div class="list" id="list"></div></div>`;
       els.clear(); S.ready = false;
       $$("[data-s]").forEach((b) => b.onclick = () => { S.sort = b.dataset.s; $$("[data-s]").forEach((x) => x.classList.toggle("on", x === b)); paint(); });
@@ -323,9 +323,9 @@ Pages.proc = (() => {
         if (!row) return;
         const r = S.rows.find((x) => x.key === row.dataset.key);
         if (e.target.dataset.a === "close" && !r.protected) {
-          if (!await confirmBox({ title: `Fechar ${r.name}?`, body: `${r.count} processo(s).\n\n⚠ Tudo que não foi salvo nele será perdido.`, ok: "Fechar", danger: true })) return;
+          if (!await confirmBox({ title: `Fechar ${r.name}?`, body: `${r.count} processo(s).\n\nTudo que não foi salvo nele será perdido.`, ok: "Fechar", danger: true })) return;
           const res = await api.proc_close(r.key);
-          toast(res.errors.length ? "⚠ " + res.errors.slice(0, 2).join(" • ") : `✅ ${r.name} fechado`);
+          toast(res.errors.length ? "" + res.errors.slice(0, 2).join(" • ") : `${r.name} fechado`);
           refresh();
         } else { S.sel = r.key; paint(); }
       };

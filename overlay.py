@@ -61,7 +61,7 @@ class Overlay(tk.Toplevel):
 def describe(reading, state, throttled, cur_max):
     """Texto curto do cantinho."""
     if not reading:
-        return "🌡 sem leitura de temperatura"
+        return "sem leitura de temperatura"
     cpu_t, gpu_t = reading.get("cpu"), reading.get("gpu")
     parts = []
     if cpu_t is not None:
@@ -70,11 +70,11 @@ def describe(reading, state, throttled, cur_max):
         parts.append(f"GPU {gpu_t:.0f}°C")
     base = "  •  ".join(parts) or "sem leitura"
     if state == thermal.CRIT:
-        return f"🚨 {base} — PERIGO, clock em {cur_max or '…'}%"
+        return f"{base} — PERIGO, clock em {cur_max or '…'}%"
     if state == thermal.HOT:
-        return f"🔥 {base} — quente" + (f", clock em {cur_max}%" if throttled and cur_max else "")
+        return f"{base} — quente" + (f", clock em {cur_max}%" if throttled and cur_max else "")
     if state == thermal.WARN:
-        return f"⚠ {base} — esquentando"
+        return f"{base} — esquentando"
     if throttled and cur_max:
-        return f"🌡 {base} — esfriando, clock em {cur_max}%"
-    return f"🌡 {base}"
+        return f"{base} — esfriando, clock em {cur_max}%"
+    return f"{base}"

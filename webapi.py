@@ -214,7 +214,7 @@ class Api:
     def _sec_cfg(self):
         c = self._cfg
         return {**asdict(c), "limit": c.limit, "crit": c.crit,
-                "modes": {"gamer": "🎮 Gamer", "careful": "🛡 Cuidadoso", "very": "🧯 Bem cuidadoso"}}
+                "modes": {"gamer": "Gamer", "careful": "Cuidadoso", "very": "Bem cuidadoso"}}
 
     def sec_state(self):
         return self._sec_cfg()
@@ -900,7 +900,7 @@ class Api:
         def beat():
             while not stop.wait(30):
                 s = int(time.monotonic() - t0)
-                self._emit(event, f"⏳ ainda trabalhando… {s // 60}min{s % 60:02d}s")
+                self._emit(event, f"ainda trabalhando… {s // 60}min{s % 60:02d}s")
 
         def work():
             threading.Thread(target=beat, daemon=True).start()
@@ -915,7 +915,7 @@ class Api:
                         last = bucket
                     self._emit(event, line)
             except Exception as e:
-                self._emit(event, f"✖ erro: {e}")
+                self._emit(event, f"erro: {e}")
             finally:
                 stop.set()
                 self._emit(end_event, True)
@@ -1025,17 +1025,17 @@ class Api:
         def work():
             admin = bk.is_admin()
             if admin:
-                self._emit("bloat:log", "🛟 Criando ponto de restauração antes…")
+                self._emit("bloat:log", "Criando ponto de restauração antes…")
                 self._emit("bloat:log", "   " + bk.create_restore_point("WebDark - antes de remover apps")[1])
             else:
-                self._emit("bloat:log", "⚠ Sem admin: sem ponto de restauração (os apps voltam pela Store).")
+                self._emit("bloat:log", "Sem admin: sem ponto de restauração (os apps voltam pela Store).")
             ok = 0
             for line in bk.remove_appx(chosen, admin):
                 if line.startswith("OK|"):
                     ok += 1
-                    self._emit("bloat:log", "✔ removido: " + line[3:])
+                    self._emit("bloat:log", "removido: " + line[3:])
                 elif line.startswith("FAIL|"):
-                    self._emit("bloat:log", "✖ falhou: " + line[5:])
+                    self._emit("bloat:log", "falhou: " + line[5:])
             self._emit("bloat:done", ok)
 
         self._thread(work)

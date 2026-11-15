@@ -229,3 +229,7 @@ h2 { margin: 6px 0 0; }.page > .bar2, .page > .tabs, .page > .filters, .page > .
 .gc-acts .btn, .gc-acts .ghost { padding: 8px 14px; font-size: 13px; white-space: nowrap; }
 .autonote { display: flex; gap: 14px; align-items: center; padding: 14px 18px; background: rgba(255,255,255,.035); }
 .autonote .t { flex: 1; }
+.diag { display: flex; gap: 10px; align-items: baseline; padding: 3px 6px; }
+.diag .gc-dot { flex: none; margin-top: 0; transform: translateY(-1px); }
+.mini.icon { padding: 5px; display: grid; place-items: center; }
+.mini.icon .ico { width: 16px; height: 16px; }

@@ -29,12 +29,12 @@ const ready = new Promise((res) => {
   else window.addEventListener("pywebviewready", () => res());
 });
 const api = new Proxy({}, { get: (_, name) => async (...a) => { await ready; return window.pywebview.api[name](...a); } });
-on("error", (msg) => toast("⚠ " + msg));
+on("error", (msg) => toast("" + msg));
 
 // ---- avisos e confirmação
 function toast(text) {
   // aviso de "precisa de administrador" vira uma pergunta com o botão pra reabrir, em vez de um recado que some
-  if (/precisa de administrador/i.test(text) && !(window.INFO && window.INFO.admin)) return adminPrompt(text.replace(/^⚠\s*/, ""));
+  if (/precisa de administrador/i.test(text) && !(window.INFO && window.INFO.admin)) return adminPrompt(text.replace(/^\s*/, ""));
   const e = $("#toast");
   e.textContent = text;
   e.classList.add("on");
@@ -126,6 +126,7 @@ const ICON = (() => {
     help: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>',
     refresh: '<path d="M20 11a8 8 0 0 0-14.6-4.5L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.6 4.5L20 16"/><path d="M20 21v-5h-5"/>',
+    close: '<path d="M6 6l12 12M18 6 6 18"/>',
     shield: '<path d="M12 3 5 6v5.5c0 4.4 2.9 8.2 7 9.5 4.1-1.3 7-5.1 7-9.5V6l-7-3Z"/>',
   };
   return (k, cls = "ico") => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[k] || ""}</svg>`;
@@ -197,7 +198,7 @@ async function boot() {
       b.disabled = true;
       toast("Confirme o aviso do Windows… esta janela fecha sozinha e abre de novo como administrador.");
       const ok = await api.relaunch_admin();
-      if (!ok) { b.disabled = false; toast("⚠ Você recusou o pedido do Windows. Sem administrador, parte das funções fica travada."); }
+      if (!ok) { b.disabled = false; toast("Você recusou o pedido do Windows. Sem administrador, parte das funções fica travada."); }
     };
   }
   if (Pages[curPage] && Pages[curPage].info) Pages[curPage].info(info);
