@@ -6,7 +6,7 @@ arquivo: system.py
 
 | Recurso | Funções |
 |---|---|
-| Ajustes do sistema (admin, com aviso) | `class SysTweak`, `SYS_TWEAKS`, `service_states`, `tweak_state`, `warning_text`, `apply_tweak` |
+| Ajustes do sistema (admin, com aviso) | `class SysTweak` (`legacy=True` = saiu do app, só aparece aplicado para desfazer: `wsearch`), `SYS_TWEAKS`, `service_states`, `tweak_state`, `warning_text`, `apply_tweak` |
 | Disco | `system_disk_kind`, `trim_status`, `enable_trim`, `optimize_mode`, `optimize_drive` |
 | Processos | `class ProcGroup`, `PROTECTED_NAMES`, `_is_protected`, `process_groups`, `close_group` |
 | Downloads antigos | `downloads_dir`, `old_downloads` |

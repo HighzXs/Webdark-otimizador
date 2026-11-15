@@ -16,7 +16,7 @@ SpaceTabs.dirs = (() => {
     else {
       const big = Math.max(...S.items.map((i) => i.size), 1);
       box.innerHTML = S.items.map((it, n) => `<div class="row slim" data-n="${n}" style="--cols:1fr 220px 100px 90px">
-        <div class="name" style="${it.dir ? "cursor:pointer" : ""}" data-a="${it.dir ? "enter" : ""}">${it.dir ? "📁" : "📄"} ${esc(it.name)}</div>
+        <div class="name" style="${it.dir ? "cursor:pointer" : ""}" data-a="${it.dir ? "enter" : ""}">${esc(it.name)}</div>
         <div class="meter"><i style="width:${Math.max(2, (it.size / big) * 100)}%"></i></div>
         <div class="size">${fmt(it.size)}</div><div class="acts"><button class="mini" data-a="open">Abrir</button></div></div>`).join("");
     }
@@ -26,7 +26,7 @@ SpaceTabs.dirs = (() => {
   return {
     mount(el) {
       el.innerHTML = `<div class="card bar2"><div class="fld"><label for="droot">Disco</label><select id="droot">${driveOptions(S.path)}</select></div>
-        <button class="btn" id="dscan">🔍 Escanear</button><button class="ghost" id="dup">⬆ Subir uma pasta</button>
+        <button class="btn" id="dscan">Escanear</button><button class="ghost" id="dup">Subir uma pasta</button>
         <div class="fld grow"><label>Você está em</label><span class="muted" id="dpath" style="line-height:42px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span></div></div>
         <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><div class="list" id="dirl"></div></div>`;
       $("#dscan").onclick = () => scan($("#droot").value);
@@ -51,7 +51,7 @@ SpaceTabs.dups = (() => {
     const box = $("#dupl");
     if (!box) return;
     if (S.scanning) box.innerHTML = `<div class="empty">${esc(S.progress || "Procurando… (pode levar alguns minutos)")}</div>`;
-    else if (!S.groups.length) box.innerHTML = S.done ? '<div class="empty">Nenhum duplicado desse tamanho por aqui. 👍<br>Tente “maiores que 1 MB” ou outra pasta.</div>'
+    else if (!S.groups.length) box.innerHTML = S.done ? '<div class="empty">Nenhum duplicado desse tamanho por aqui. <br>Tente “maiores que 1 MB” ou outra pasta.</div>'
       : '<div class="empty">Escolha onde procurar e clique em “Procurar”.<br>A busca continua sozinha se você trocar de tela.</div>';
     else box.innerHTML = S.groups.map((g) => `<div class="grp" style="padding-top:16px">${g.files.length} cópias de ${fmt(g.size)} • desperdício de ${fmt(g.size * (g.files.length - 1))}</div>` +
       g.files.map((f) => `<div class="row slim" data-p="${esc(f.path)}" style="--cols:44px 1fr 100px">
@@ -61,7 +61,7 @@ SpaceTabs.dups = (() => {
     const total = [...S.marks].reduce((a, p) => a + sizeOf(p), 0);
     const b = $("#dupdel");
     b.disabled = !S.marks.size || S.scanning;
-    b.textContent = S.marks.size ? `🗑 Mandar ${S.marks.size} marcados pra lixeira (${fmt(total)})` : "🗑 Mandar marcados pra lixeira";
+    b.textContent = S.marks.size ? `Mandar ${S.marks.size} marcados pra lixeira (${fmt(total)})` : "Mandar marcados pra lixeira";
     $("#dupinfo").textContent = S.groups.length ? `${S.groups.length}${S.total > S.groups.length ? " de " + S.total : ""} grupo(s). Em cada grupo uma cópia fica sem marca (a que sugiro manter).` : "";
     $("#dupgo").disabled = S.scanning;
   }
@@ -77,8 +77,8 @@ SpaceTabs.dups = (() => {
         <select id="dupwhere"><option value="mine">Minhas pastas (Documentos, Downloads…)</option>${driveOptions("")}</select></div>
         <div class="fld"><label for="dupmin">Tamanho mínimo</label>
         <select id="dupmin"><option value="1">maiores que 1 MB</option><option value="10" selected>maiores que 10 MB</option><option value="100">maiores que 100 MB</option></select></div>
-        <button class="btn" id="dupgo">🔍 Procurar</button><span class="muted" id="dupinfo" style="flex:1;align-self:center"></span>
-        <button class="btn red" id="dupdel" disabled>🗑 Mandar marcados pra lixeira</button></div>
+        <button class="btn" id="dupgo">Procurar</button><span class="muted" id="dupinfo" style="flex:1;align-self:center"></span>
+        <button class="btn red" id="dupdel" disabled>Mandar marcados pra lixeira</button></div>
         <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><div class="list" id="dupl"></div></div>`;
       $("#dupgo").onclick = () => { if (S.scanning) return; S.scanning = true; S.done = false; S.groups = []; S.marks.clear(); S.progress = ""; busy(1); paint(); api.dups_scan($("#dupwhere").value, +$("#dupmin").value); };
       $("#dupl").onclick = (e) => {
@@ -86,7 +86,7 @@ SpaceTabs.dups = (() => {
         if (!row || e.target.dataset.a !== "check") return;
         const p = row.dataset.p, g = S.groups.find((x) => x.files.some((f) => f.path === p));
         if (S.marks.has(p)) S.marks.delete(p);
-        else { S.marks.add(p); if (g.files.every((f) => S.marks.has(f.path))) { S.marks.delete(p); toast("⚠ Deixe pelo menos uma cópia de cada arquivo sem marcar."); } }
+        else { S.marks.add(p); if (g.files.every((f) => S.marks.has(f.path))) { S.marks.delete(p); toast("Deixe pelo menos uma cópia de cada arquivo sem marcar."); } }
         paint();
       };
       $("#dupdel").onclick = async () => {
@@ -97,7 +97,7 @@ SpaceTabs.dups = (() => {
         S.groups = S.groups.map((g) => ({ ...g, files: g.files.filter((f) => !gone.has(f.path)) })).filter((g) => g.files.length > 1);
         S.marks = new Set([...S.marks].filter((p) => !gone.has(p)));
         paint();
-        toast(r.failed.length ? `⚠ ${r.done.length} ok, ${r.failed.length} falharam: ${r.failed[0].err}` : `✅ ${fmt(r.freed)} na lixeira`);
+        toast(r.failed.length ? `${r.done.length} ok, ${r.failed.length} falharam: ${r.failed[0].err}` : `${fmt(r.freed)} na lixeira`);
       };
       paint();
     },
@@ -112,28 +112,28 @@ SpaceTabs.dl = (() => {
     if (!box) return;
     if (S.scanning) box.innerHTML = '<div class="empty">Procurando…</div>';
     else if (!S.done) box.innerHTML = '<div class="empty">Clique em “Listar”. Só listo: nada é apagado sozinho, você escolhe arquivo por arquivo.</div>';
-    else if (!S.rows.length) box.innerHTML = '<div class="empty">Nada velho por aqui. 👍</div>';
+    else if (!S.rows.length) box.innerHTML = '<div class="empty">Nada velho por aqui. </div>';
     else box.innerHTML = S.rows.map((r) => {
       const lock = r.level === "danger";
       return `<div class="row" data-id="${r.id}" style="--cols:44px 118px 1fr 100px 150px"><div class="cb ${S.checked.has(r.id) ? "on" : ""} ${lock ? "off" : ""}" data-a="check"></div><div>${riskPill(r)}</div>
         <div style="min-width:0"><div class="name">${esc(r.rel)}</div><div class="why">${esc(r.reason)}</div></div><div class="size">${fmt(r.size)}</div>
-        <div class="acts"><button class="mini" data-a="show">Mostrar</button><button class="mini red" data-a="trash" ${lock ? "disabled" : ""}>${lock ? "🔒" : "🗑"}</button></div></div>`;
+        <div class="acts"><button class="mini" data-a="show">Mostrar</button><button class="mini red" data-a="trash" ${lock ? "disabled" : ""}>${lock ? "Protegido" : "Lixeira"}</button></div></div>`;
     }).join("");
     $("#dlgo").disabled = S.scanning;
     $("#dlinfo").textContent = S.done ? `${S.rows.length} arquivo(s) • ${fmt(S.rows.reduce((a, r) => a + r.size, 0))}` : "";
     const chosen = S.rows.filter((r) => S.checked.has(r.id)), safe = S.rows.filter((r) => r.level === "ok");
     const del = $("#dldel");
     del.hidden = !chosen.length;
-    del.textContent = `🗑 Mandar ${chosen.length} marcado(s) pra lixeira (${fmt(chosen.reduce((a, r) => a + r.size, 0))})`;
+    del.textContent = `Mandar ${chosen.length} marcado(s) pra lixeira (${fmt(chosen.reduce((a, r) => a + r.size, 0))})`;
     $("#dlsafe").hidden = !safe.length;
-    $("#dlsafe").textContent = safe.every((r) => S.checked.has(r.id)) ? "Desmarcar todos" : `✔ Marcar os ${safe.length} seguros`;
+    $("#dlsafe").textContent = safe.every((r) => S.checked.has(r.id)) ? "Desmarcar todos" : `Marcar os ${safe.length} seguros`;
   }
   on("dl:done", (rows) => { S.rows = rows; S.checked.clear(); S.scanning = false; S.done = true; busy(-1); paint(); });
   return {
     mount(el) {
       el.innerHTML = `<div class="card bar2"><div class="fld"><label for="dldays">Sem mexer há mais de</label><select id="dldays"><option value="30">30 dias</option><option value="60">60 dias</option>
         <option value="90" selected>90 dias</option><option value="180">180 dias</option><option value="365">1 ano</option></select></div>
-        <button class="btn" id="dlgo">🔍 Listar</button><span class="muted" id="dlinfo" style="flex:1;align-self:center"></span>
+        <button class="btn" id="dlgo">Listar</button><span class="muted" id="dlinfo" style="flex:1;align-self:center"></span>
         <button class="ghost" id="dlsafe" hidden></button><button class="btn red" id="dldel" hidden></button></div>
         <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><div class="list" id="dll"></div></div>`;
       $("#dlgo").onclick = () => { if (S.scanning) return; S.scanning = true; busy(1); paint(); api.dl_scan(+$("#dldays").value); };
@@ -146,12 +146,12 @@ SpaceTabs.dl = (() => {
       $("#dldel").onclick = async () => {
         const chosen = S.rows.filter((r) => S.checked.has(r.id) && r.level !== "danger"), total = chosen.reduce((a, r) => a + r.size, 0);
         const care = chosen.filter((r) => r.level === "care").length;
-        if (!await confirmBox({ title: `Mandar ${chosen.length} arquivo(s) para a lixeira?`, body: `Libera ${fmt(total)}. Dá pra recuperar da lixeira do Windows.` + (care ? `\n\n⚠ ${care} deles estão como CUIDADO: confira antes.` : ""), ok: "Mandar para a lixeira", danger: care > 0 })) return;
+        if (!await confirmBox({ title: `Mandar ${chosen.length} arquivo(s) para a lixeira?`, body: `Libera ${fmt(total)}. Dá pra recuperar da lixeira do Windows.` + (care ? `\n\n${care} deles estão como CUIDADO: confira antes.` : ""), ok: "Mandar para a lixeira", danger: care > 0 })) return;
         busy(1); const res = await api.trash(chosen.map((r) => r.path)); busy(-1);
         const gone = new Set(res.done);
         S.rows = S.rows.filter((r) => !gone.has(r.path)); S.checked = new Set([...S.checked].filter((id) => S.rows.some((r) => r.id === id)));
         paint();
-        toast(res.failed.length ? `⚠ ${res.done.length} ok, ${res.failed.length} falharam: ${res.failed[0].err}` : `✅ ${fmt(res.freed)} na lixeira`);
+        toast(res.failed.length ? `${res.done.length} ok, ${res.failed.length} falharam: ${res.failed[0].err}` : `${fmt(res.freed)} na lixeira`);
       };
       $("#dll").onclick = async (e) => {
         const row = e.target.closest(".row");
@@ -162,7 +162,7 @@ SpaceTabs.dl = (() => {
         else if (a === "trash") {
           if (!await confirmBox({ title: "Mandar para a lixeira?", body: `${r.label}: ${r.reason}\n\n${r.path}`, ok: "Mandar para a lixeira", danger: r.level === "care" })) return;
           const res = await api.trash([r.path]);
-          if (res.done.length) { S.rows = S.rows.filter((x) => x.id !== r.id); paint(); toast(`✅ ${fmt(res.freed)} na lixeira`); } else toast("⚠ " + res.failed[0].err);
+          if (res.done.length) { S.rows = S.rows.filter((x) => x.id !== r.id); paint(); toast(`${fmt(res.freed)} na lixeira`); } else toast("" + res.failed[0].err);
         }
       };
       paint();
@@ -199,16 +199,16 @@ Pages.clean = (() => {
   on("cl:sized", () => { S.sized = true; busy(-1); paint(); });
   on("cl:step", (d) => { S.pct = Math.round((d.i / d.n) * 100); paint(); });
   on("cl:log", (l) => { S.log += l + "\n"; paint(); });
-  on("cl:done", (d) => { S.running = false; S.pct = 100; busy(-1); S.log += `✅ ${fmt(d.freed)} liberados.\n`; toast("✅ " + fmt(d.freed) + " liberados"); paint(); });
-  on("cl:dism_done", () => { busy(-1); S.log += "✅ DISM terminou.\n"; paint(); });
+  on("cl:done", (d) => { S.running = false; S.pct = 100; busy(-1); S.log += `${fmt(d.freed)} liberados.\n`; toast("" + fmt(d.freed) + " liberados"); paint(); });
+  on("cl:dism_done", () => { busy(-1); S.log += "DISM terminou.\n"; paint(); });
 
   return {
     mount(el) {
       el.innerHTML = head("Limpeza", "Escolha o que limpar. Nada aqui apaga seus documentos, fotos ou senhas.") + `
-        <div class="tools"><button class="ghost" id="clre">🔍 Analisar de novo</button><span class="muted" id="cltot"></span><span style="flex:1"></span><button class="btn" id="clrun">🧹 Limpar marcados</button></div>
+        <div class="tools"><button class="ghost" id="clre">Analisar de novo</button><span class="muted" id="cltot"></span><span style="flex:1"></span><button class="btn" id="clrun">Limpar marcados</button></div>
         <div class="bar" style="margin:0"><i id="clfill"></i></div>
         <div class="scroll" id="clscroll"><div id="cl" style="display:flex;flex-direction:column;gap:10px"></div>
-          <h2>🔧 Extras para liberar MUITO espaço <span class="muted">(precisam de administrador)</span></h2>
+          <h2>Extras para liberar MUITO espaço <span class="muted">(precisam de administrador)</span></h2>
           <div class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
             <div style="display:flex;gap:14px;align-items:center"><button class="ghost" id="hib">Desligar hibernação</button><span class="muted" id="hibtxt"></span></div>
             <div style="display:flex;gap:14px;align-items:center"><button class="ghost" id="dism">Limpar componentes antigos do Windows (DISM)</button><span class="muted">Demora uns minutos e fica parado em 20%/40%… é normal. Não feche.</span></div>
@@ -225,7 +225,7 @@ Pages.clean = (() => {
       };
       $("#clrun").onclick = async () => {
         const chosen = S.items.filter((c) => S.checked.has(c.key)), warns = chosen.filter((c) => c.warn);
-        if (warns.length && !await confirmBox({ title: "Atenção", body: warns.map((c) => `⚠ ${c.name}\n${c.warn}`).join("\n\n") + "\n\nQuer mesmo limpar isso?", ok: "Limpar mesmo assim", danger: true })) return;
+        if (warns.length && !await confirmBox({ title: "Atenção", body: warns.map((c) => `${c.name}\n${c.warn}`).join("\n\n") + "\n\nQuer mesmo limpar isso?", ok: "Limpar mesmo assim", danger: true })) return;
         if (!await confirmBox({ title: `Limpar ${chosen.length} item(ns)?`, body: "Feche os navegadores antes para limpar mais.", ok: "Limpar" })) return;
         S.running = true; S.pct = 0; S.log = ""; busy(1); paint();
         api.clean_run(chosen.map((c) => c.key));
@@ -234,7 +234,7 @@ Pages.clean = (() => {
       $("#hib").onclick = async () => {
         if (needAdmin()) return;
         if (!await confirmBox({ title: "Desligar a hibernação?", body: "Libera o arquivo hiberfil.sys (vários GB), mas desativa hibernar e a inicialização rápida.\n\nPra desfazer: powercfg /h on (como administrador).", ok: "Desligar", danger: true })) return;
-        const ok = await api.hibernate_off(); S.extras = await api.extras_info(); toast(ok ? "Hibernação desligada. ✅" : "Não consegui desligar. 😕"); paint();
+        const ok = await api.hibernate_off(); S.extras = await api.extras_info(); toast(ok ? "Hibernação desligada. " : "Não consegui desligar. "); paint();
       };
       $("#dism").onclick = async () => {
         if (needAdmin()) return;

@@ -39,11 +39,12 @@ class SysTweak:
     stop_on: bool = True      # parar o serviço agora ao aplicar
     start_off: tuple = ()     # serviços para iniciar ao desfazer
     hdd_warning: str = ""     # aviso extra se o disco do sistema for HD
+    legacy: bool = False      # saiu do app: só aparece se estiver aplicado, para dar pra desfazer
 
 
 SYS_TWEAKS = [
     SysTweak(
-        "telemetry", "Reduzir telemetria do Windows",
+        "telemetry", "Reduzir telemetria do Windows (privacidade)",
         "Coloca DiagTrack e dmwappushservice em Manual: o Windows para de enviar dados de uso em segundo plano.",
         "Os serviços DiagTrack (Experiências do Usuário Conectado) e dmwappushservice passam para Manual e são parados.",
         "Reduz, mas não zera a telemetria (isso só por política de grupo no Windows Pro). Pode atrapalhar "
@@ -62,12 +63,13 @@ SYS_TWEAKS = [
         "SEU DISCO É UM HD. Em HD o SysMain ajuda, e desligar tende a deixar o PC mais lento. "
         "Só continue se tiver certeza."),
     SysTweak(
-        "wsearch", "Pausar a indexação do Windows Search",
-        "Alivia o disco e o processador: o Windows para de catalogar seus arquivos em segundo plano.",
+        "wsearch", "Indexação do Windows Search pausada (ajuste antigo)",
+        "Versões antigas do WebDark ofereciam isto. Em SSD não deixa o PC mais rápido e a busca do Windows fica lenta "
+        "ou para de achar arquivos. Desligue este interruptor para voltar ao normal.",
         "O serviço WSearch (Windows Search) é desativado e parado.",
         "A busca do menu Iniciar e do Explorador de Arquivos fica bem mais lenta e pode deixar de achar "
         "conteúdo de arquivos e e-mails. A busca do Outlook também pode parar de funcionar.",
-        {"WSearch": "Disabled"}, {"WSearch": "Automatic"}, ("Disabled",), True, ("WSearch",)),
+        {"WSearch": "Disabled"}, {"WSearch": "Automatic"}, ("Disabled",), True, ("WSearch",), legacy=True),
 ]
 
 
@@ -91,10 +93,10 @@ def tweak_state(t, states):
 def warning_text(t, disk_kind):
     txt = (f"{t.name}\n\n"
            f"O QUE FAZ:\n{t.what}\n\n"
-           f"⚠ O QUE PODE DAR ERRADO:\n{t.risks}\n\n"
-           "↩ COMO DESFAZER: desligue este mesmo interruptor.")
+           f"O QUE PODE DAR ERRADO:\n{t.risks}\n\n"
+           "COMO DESFAZER: desligue este mesmo interruptor.")
     if t.hdd_warning and disk_kind == "HDD":
-        txt += f"\n\n🛑 ATENÇÃO: {t.hdd_warning}"
+        txt += f"\n\nATENÇÃO: {t.hdd_warning}"
     return txt + "\n\nQuer mesmo continuar?"
 
 
@@ -321,26 +323,26 @@ def format_specs(d):
     model = " ".join(x for x in (cs.get("Manufacturer"), cs.get("Model")) if x).strip()
     board = " ".join(x for x in (bb.get("Manufacturer"), bb.get("Product")) if x).strip()
     if model or board:
-        cards.append({"icon": "🖥", "k": "Computador", "v": model or board, "s": ("Placa-mãe: " + board) if model and board else ""})
+        cards.append({"icon": "", "k": "Computador", "v": model or board, "s": ("Placa-mãe: " + board) if model and board else ""})
     if cpu.get("Name"):
         ghz = (cpu.get("MaxClockSpeed") or 0) / 1000
-        cards.append({"icon": "🧠", "k": "Processador", "v": re.sub(r"\s+", " ", cpu["Name"]).strip(),
+        cards.append({"icon": "", "k": "Processador", "v": re.sub(r"\s+", " ", cpu["Name"]).strip(),
                       "s": f"{cpu.get('NumberOfCores', '?')} núcleos • {cpu.get('NumberOfLogicalProcessors', '?')} threads" + (f" • até {ghz:.1f} GHz" if ghz else "")})
     gpus = [g.get("Name", "") for g in _lst(d.get("gpu")) if g.get("Name") and "virtual" not in g["Name"].lower() and "remote" not in g["Name"].lower()]
     if gpus:
-        cards.append({"icon": "🎞", "k": "Placa de vídeo", "v": " + ".join(gpus), "s": ""})
+        cards.append({"icon": "", "k": "Placa de vídeo", "v": " + ".join(gpus), "s": ""})
     mem = _lst(d.get("mem"))
     if mem:
         total = sum(int(m.get("Capacity") or 0) for m in mem)
         kind = _RAM_TYPE.get(mem[0].get("SMBIOSMemoryType"), "")
         speed = mem[0].get("Speed")
-        cards.append({"icon": "🧩", "k": "Memória RAM", "v": f"{_gb(total)} {kind}".strip() + (f" • {speed} MHz" if speed else ""),
+        cards.append({"icon": "", "k": "Memória RAM", "v": f"{_gb(total)} {kind}".strip() + (f" • {speed} MHz" if speed else ""),
                       "s": f"{len(mem)} pente(s)"})
     if os_.get("Caption"):
-        cards.append({"icon": "🪟", "k": "Sistema", "v": os_["Caption"].replace("Microsoft ", ""),
+        cards.append({"icon": "", "k": "Sistema", "v": os_["Caption"].replace("Microsoft ", ""),
                       "s": f"build {os_.get('BuildNumber', '?')} • {os_.get('OSArchitecture', '')}"})
     disks = _lst(d.get("dk"))
     if disks:
-        cards.append({"icon": "💽", "k": "Discos", "v": " • ".join(f"{x.get('FriendlyName', '?')} ({_gb(int(x.get('Size') or 0))})" for x in disks),
+        cards.append({"icon": "", "k": "Discos", "v": " • ".join(f"{x.get('FriendlyName', '?')} ({_gb(int(x.get('Size') or 0))})" for x in disks),
                       "s": " • ".join(sorted({str(x.get("MediaType") or "?") for x in disks}))})
     return {"cards": cards, "boot": time.time() - psutil.boot_time()}

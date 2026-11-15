@@ -1,4 +1,4 @@
-// Central de ajuda: explica cada tela e cada botão, sem travar nada. Tem o botão 💡 flutuante (dicas da tela atual,
+// Central de ajuda: explica cada tela e cada botão, sem travar nada. Tem o botão flutuante (dicas da tela atual,
 // com "mostrar onde fica" que acende o botão) e a tela "Ajuda" com um plano de otimização no seu ritmo.
 
 // ---- dicas por tela (a chave é a aba aberta; sel = o botão que acende)
@@ -45,20 +45,19 @@ const TIPS = {
     ["Detalhes", "Clique num item da lista pra ler o que ele é e se vale desligar.", "#detail"]]],
   net: ["Rede", "Internet mais rápida e estável.", [
     ["Wi-Fi e adaptadores", "Mostra a velocidade de cada placa de rede e o sinal do Wi-Fi.", "#n-wifi"],
-    ["Melhor DNS", "Testa vários servidores de DNS de verdade e mostra qual responde mais rápido. Trocar não é obrigatório e dá pra voltar ao automático.", "#n-dnstest"],
+    ["Melhor DNS", "Testa vários servidores de DNS de verdade e mostra qual responde mais rápido. Ajuda os sites a começarem a abrir, não muda o ping dos jogos. Trocar não é obrigatório e dá pra voltar ao automático.", "#n-dnstest"],
     ["Otimização de Entrega", "Impede o Windows de usar sua internet pra repassar atualizações a outros PCs.", "#n-do"],
     ["Limitar programas", "Limita o que um programa envia. Pode causar instabilidade: use com cuidado.", "#n-lim"],
     ["Drivers de rede", "Mostra a idade do driver do Wi-Fi e do cabo e leva você ao Windows Update pra baixar drivers.", "#n-drv"],
     ["Reparar a rede", "Os comandos clássicos de reparo (ipconfig e netsh). Os mais fortes pedem reiniciar o PC.", "#n-fix"]]],
-  mem: ["Memória", "Libere RAM e ajuste como o Windows usa a memória.", [
-    ["Lista de espera", "Cache de arquivos na RAM. A limpeza suave é segura até com jogo aberto; a completa pode engasgar por uns segundos.", "#m-sb-soft"],
-    ["Liberar RAM de todos", "Devolve a RAM que navegadores, Discord e Spotify guardam sem usar. O programa que você está usando não é tocado.", "#m-trimall"],
-    ["Congelar", "Para um programa de vez enquanto você joga (a RAM volta na hora). Descongela sozinho no prazo ou ao fechar o WebDark.", "#m-apps"],
+  mem: ["Memória", "Veja o uso da RAM e congele o que pesa enquanto você joga.", [
+    ["Congelar", "Para um programa de vez enquanto você joga: ele não usa mais o processador. Descongela sozinho no prazo ou ao fechar o WebDark.", "#m-apps"],
     ["Congelar sozinho ao jogar", "Detecta jogo em tela cheia e congela só os programas que você marcou, menos quem está em chamada. Descongela quando o jogo sai.", "#m-auto"],
-    ["Serviços que dá pra desligar", "Lista com o risco e o que quebra em cada um. Dá pra religar com o mesmo interruptor.", "#m-svcs"],
-    ["Arquivo de paginação", "Mostra uma sugestão pela sua RAM. Precisa reiniciar. Dá pra voltar ao automático.", "#m-pfgo"],
-    ["Agrupar serviços", "Junta serviços em menos processos svchost e economiza RAM. Precisa reiniciar.", "#m-svcgo"],
-    ["SysMain", "Pré-carrega programas na RAM. Em SSD pode desligar; em HD deixe ligado.", "#m-sysmain"]]],
+    ["Arquivo de paginação", "Mostra se está no automático (o melhor). Se estiver fixo, dá pra voltar ao automático.", "#m-pf"]]],
+  game: ["Jogos", "O que costuma estar errado e tira FPS sem você saber.", [
+    ["Placa de vídeo certa", "Em notebook com duas placas, marca os jogos pra usar a dedicada. Dá pra desfazer.", "#g-list"],
+    ["Monitor e driver", "Avisa se a tela está abaixo da taxa máxima ou se o driver de vídeo está velho.", "#g-list"],
+    ["Verificar de novo", "Roda a verificação outra vez depois de mudar algo.", "#g-again"]]],
   health: ["Saúde", "Veja se o disco está bom e conserte problemas do Windows.", [
     ["Saúde do disco", "Mostra se o disco avisa que vai falhar. Se aparecer alerta, faça backup antes de qualquer coisa.", "#hd"],
     ["Diagnóstico geral", "Confere sinais de problema no Windows.", "#rd"],
@@ -77,29 +76,29 @@ const TIPS = {
 
 // ---- plano de otimização (a ordem sugerida pra quem não sabe por onde começar)
 const PLAN = [
-  { k: "quick", icon: "🧹", t: "Faça a faxina rápida", where: ["home"], sel: "#go", level: "Seguro", time: "1 min",
-    d: "Limpa temporários, cache e lixeira.", why: "É o jeito mais rápido de liberar espaço sem risco.", care: "Feche os navegadores antes pra limpar mais." },
-  { k: "bloat", icon: "🧨", t: "Tire o bloatware", where: ["apps", "bloat"], sel: "#rec", level: "Seguro", time: "3 min",
+  { k: "quick", icon: "", t: "Faça a faxina rápida", where: ["home"], sel: "#go", level: "Seguro", time: "1 min",
+    d: "Limpa temporários, lixeira e sobras do Windows Update.", why: "É o jeito mais rápido de liberar espaço sem risco.", care: "Seus arquivos pessoais não são tocados." },
+  { k: "bloat", icon: "", t: "Tire o bloatware", where: ["apps", "bloat"], sel: "#rec", level: "Seguro", time: "3 min",
     d: "Remove apps de fábrica que ninguém usa.", why: "Libera espaço e tira coisa rodando à toa.", care: "Dá pra reinstalar pela Microsoft Store." },
-  { k: "progs", icon: "📦", t: "Desinstale o que você não usa", where: ["apps", "progs"], sel: "#marksus", level: "Cuidado", time: "5 min",
+  { k: "progs", icon: "", t: "Desinstale o que você não usa", where: ["apps", "progs"], sel: "#marksus", level: "Cuidado", time: "5 min",
     d: "Marque vários programas e desinstale em lote.", why: "Programas parados ocupam GBs.", care: "Só marque o que você reconhece. Cada desinstalador pede sua confirmação." },
-  { k: "start", icon: "🚀", t: "Limpe a inicialização", where: ["speed", "start"], sel: "#rec", level: "Seguro", time: "2 min",
+  { k: "start", icon: "", t: "Limpe a inicialização", where: ["speed", "start"], sel: "#rec", level: "Seguro", time: "2 min",
     d: "Desliga o que abre junto com o Windows sem precisar.", why: "O PC liga mais rápido e sobra memória.", care: "Dá pra religar qualquer item depois." },
-  { k: "space", icon: "📄", t: "Ache o que está comendo espaço", where: ["space", "files"], sel: "#scan", level: "Cuidado", time: "5 min",
+  { k: "space", icon: "", t: "Ache o que está comendo espaço", where: ["space", "files"], sel: "#scan", level: "Cuidado", time: "5 min",
     d: "Arquivos grandes, duplicados e downloads velhos, com aviso de risco.", why: "Costuma ser onde estão dezenas de GB.", care: "Tudo vai pra lixeira do Windows: dá pra recuperar." },
-  { k: "power", icon: "⚡", t: "Ajuste o plano de energia", where: ["speed", "perf"], sel: "#plans", level: "Seguro", time: "1 min",
+  { k: "power", icon: "", t: "Ajuste o plano de energia", where: ["speed", "perf"], sel: "#plans", level: "Seguro", time: "1 min",
     d: "Escolha entre economia e desempenho máximo.", why: "Em PC de mesa, Alto desempenho deixa tudo mais ágil.", care: "Em notebook, gasta mais bateria." },
-  { k: "health", icon: "🩺", t: "Confira a saúde do PC", where: ["protect", "health"], sel: "#rd", level: "Seguro", time: "2 min",
+  { k: "health", icon: "", t: "Confira a saúde do PC", where: ["protect", "health"], sel: "#rd", level: "Seguro", time: "2 min",
     d: "Saúde do disco e diagnóstico do Windows.", why: "Descobre problema antes de virar perda de dados.", care: "Se o disco der alerta, faça backup antes de tudo." },
-  { k: "net", icon: "🌐", t: "Melhore a internet", where: ["speed", "net"], sel: "#n-dnstest", level: "Seguro", time: "3 min",
-    d: "Teste o melhor DNS e confira o Wi-Fi e os drivers.", why: "Sites começam a abrir mais rápido.", care: "Trocar DNS é opcional e dá pra voltar ao automático." },
-  { k: "sec", icon: "🛡", t: "Ligue o vigia de temperatura (opcional)", where: ["protect", "security"], sel: "#sw-on", level: "Opcional", time: "2 min",
+  { k: "net", icon: "", t: "Melhore a internet", where: ["speed", "net"], sel: "#n-dnstest", level: "Seguro", time: "3 min",
+    d: "Teste o melhor DNS e confira o Wi-Fi e os drivers.", why: "Sites começam a abrir mais rápido (o ping dos jogos não muda).", care: "Trocar DNS é opcional e dá pra voltar ao automático." },
+  { k: "sec", icon: "", t: "Ligue o vigia de temperatura (opcional)", where: ["protect", "security"], sel: "#sw-on", level: "Opcional", time: "2 min",
     d: "Baixa o clock sozinho se o PC esquentar demais.", why: "Protege notebooks e PCs que esquentam.", care: "Vem desligado: só funciona se você ligar." },
 ];
 
 // ---- otimização guiada (professor): o que a ferramenta faz em uma frase + o que clicar. A chave é a mesma do PLAN.
 const TUTOR = {
-  quick: ["Apaga temporários, cache dos navegadores e lixeira. Seus arquivos pessoais não são tocados.", "Clique em Faxina rápida."],
+  quick: ["Apaga temporários, lixeira e sobras do Windows Update. Seus arquivos pessoais não são tocados.", "Clique em Faxina rápida."],
   bloat: ["São apps que vêm no Windows e quase ninguém usa. Tirar libera espaço e deixa o PC mais leve.", "Clique em Marcar recomendados e depois em Remover marcados."],
   progs: ["Lista seus programas, os maiores primeiro. O que você não usa só ocupa espaço.", "Marque só o que você reconhece e desinstale."],
   start: ["São os programas que ligam junto com o Windows. Menos coisas ligando = PC que liga mais rápido.", "Clique em Desligar os recomendados."],
@@ -119,19 +118,19 @@ const Tutor = (() => {
   function paint() {
     if (!el) return;
     if (i >= total) {
-      el.innerHTML = `<div class="tt-head"><b>🎉 Pronto!</b></div><div class="tt-text">Você passou por todas as etapas e fez ${doneCount()} de ${total}. ${doneCount() < total ? "As puladas ficam no plano da Ajuda, pra fazer quando quiser." : "Seu PC está mais leve."}</div>
+      el.innerHTML = `<div class="tt-head"><b>Pronto!</b></div><div class="tt-text">Você passou por todas as etapas e fez ${doneCount()} de ${total}. ${doneCount() < total ? "As puladas ficam no plano da Ajuda, pra fazer quando quiser." : "Seu PC está mais leve."}</div>
         <div class="tt-acts"><button class="btn" id="tt-end">Concluir</button></div>`;
       $("#tt-end").onclick = stop;
       return;
     }
     const s = PLAN[i], t = TUTOR[s.k] || [s.d, ""];
-    el.innerHTML = `<div class="tt-head"><b>🎓 Passo ${i + 1} de ${total}</b><button class="mini" id="tt-x" title="Sair">✕</button></div>
+    el.innerHTML = `<div class="tt-head"><b>Passo ${i + 1} de ${total}</b><button class="mini icon" id="tt-x" title="Sair" aria-label="Sair">${ICON("close")}</button></div>
       <div class="bar" style="margin:0 0 10px"><i style="width:${(i / total) * 100}%"></i></div>
       <div class="tt-title">${s.icon} ${esc(s.t)} <span class="pill ${s.level === "Seguro" ? "ok" : "care"}">${esc(s.level.toUpperCase())}</span></div>
-      <div class="tt-text">${esc(t[0])}</div>${t[1] ? `<div class="tt-do">👉 ${esc(t[1])}</div>` : ""}
-      <div class="tt-acts"><button class="mini" id="tt-pt">📍 Mostrar</button><span style="flex:1"></span>
-        <button class="mini" id="tt-bk" ${i === 0 ? "disabled" : ""}>◀ Voltar</button><button class="mini" id="tt-sk">Pular</button>
-        <button class="btn" id="tt-ok">Feito, próximo ▶</button></div>`;
+      <div class="tt-text">${esc(t[0])}</div>${t[1] ? `<div class="tt-do">${esc(t[1])}</div>` : ""}
+      <div class="tt-acts"><button class="mini" id="tt-pt">Mostrar</button><span style="flex:1"></span>
+        <button class="mini" id="tt-bk" ${i === 0 ? "disabled" : ""}>Voltar</button><button class="mini" id="tt-sk">Pular</button>
+        <button class="btn" id="tt-ok">Feito, próximo </button></div>`;
     $("#tt-x").onclick = stop;
     $("#tt-pt").onclick = () => goAndPoint(s.where, s.sel);
     $("#tt-bk").onclick = () => { i--; enter(); };
@@ -197,9 +196,9 @@ function helpRefresh() {
   if (!panel) return;
   const tip = TIPS[current];
   const body = tip ? `<div class="hp-intro">${esc(tip[1])}</div>${tip[2].map(([t, d, sel], i) => `<div class="hp-item"><b>${esc(t)}</b><div>${esc(d)}</div>
-      ${sel ? `<button class="mini" data-pt="${esc(sel)}">📍 Mostrar onde fica</button>` : ""}</div>`).join("")}`
+      ${sel ? `<button class="mini" data-pt="${esc(sel)}">Mostrar onde fica</button>` : ""}</div>`).join("")}`
     : '<div class="hp-intro">Escolha uma tela no menu e eu explico o que cada botão faz.</div>';
-  panel.innerHTML = `<div class="hp-head"><b>💡 ${esc(tip ? tip[0] : "Ajuda")}</b><button class="mini" id="hp-x" title="Fechar">✕</button></div>
+  panel.innerHTML = `<div class="hp-head"><b>${esc(tip ? tip[0] : "Ajuda")}</b><button class="mini icon" id="hp-x" title="Fechar" aria-label="Fechar">${ICON("close")}</button></div>
     <div class="hp-body">${body}</div><div class="hp-foot"><button class="ghost" id="hp-all">Abrir a Central de ajuda</button></div>`;
   $("#hp-x").onclick = () => helpToggle(false);
   $("#hp-all").onclick = () => { helpToggle(false); go("help"); };
@@ -214,7 +213,7 @@ function helpToggle(open) {
 (() => {
   const stage = document.querySelector(".stage");
   const fab = document.createElement("button");
-  fab.id = "helpfab"; fab.title = "Dicas sobre esta tela"; fab.textContent = "💡";
+  fab.id = "helpfab"; fab.title = "Dicas sobre esta tela"; fab.innerHTML = ICON("help");
   fab.onclick = () => helpToggle();
   const panel = document.createElement("div");
   panel.id = "helppanel"; panel.hidden = true;
@@ -244,14 +243,14 @@ Pages.help = (() => {
   }
   return {
     mount(el) {
-      el.innerHTML = `<div><h1>Ajuda e dicas</h1><div class="muted">Sem pressa e sem obrigação. Use o plano abaixo no seu ritmo, ou clique no 💡 de qualquer tela pra entender cada botão dela.</div></div>
+      el.innerHTML = `<div><h1>Ajuda e dicas</h1><div class="muted">Sem pressa e sem obrigação. Use o plano abaixo no seu ritmo, ou clique no de qualquer tela pra entender cada botão dela.</div></div>
         <div class="scroll">
-          <div class="card tutorcta"><div style="flex:1"><b>🎓 Otimização guiada</b><div class="muted">Eu levo você a cada ferramenta, explico em uma frase o que ela faz e você otimiza o PC enquanto aprende.</div></div>
+          <div class="card tutorcta"><div style="flex:1"><b>Otimização guiada</b><div class="muted">Eu levo você a cada ferramenta, explico em uma frase o que ela faz e você otimiza o PC enquanto aprende.</div></div>
             <button class="btn" id="tutgo">Me guie</button></div>
-          <h2>🗺 Plano de otimização <span class="muted" id="planprog" style="font-weight:400"></span></h2>
+          <h2>Plano de otimização <span class="muted" id="planprog" style="font-weight:400"></span></h2>
           <div class="bar" style="margin:0"><i id="planbar"></i></div>
           <div id="planbox" style="display:flex;flex-direction:column;gap:10px"></div>
-          <h2>❓ Perguntas comuns</h2>
+          <h2>Perguntas comuns</h2>
           <div class="fld"><input class="search" id="hq" placeholder="Buscar: DNS, bloatware, administrador…" style="flex:none"></div>
           <div id="topics" style="display:flex;flex-direction:column;gap:8px"></div>
         </div>`;

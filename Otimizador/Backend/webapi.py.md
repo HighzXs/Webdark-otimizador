@@ -19,7 +19,8 @@ Estado no `__init__`: `_prefs`, `_cancels`, `_found`, `_appx/_progs/_starts/_pro
 | bandeja / janela | `attach`, `quit`, `bg_get`, `bg_set` | [[Ajustes]] |
 | atualização | `update_check`, `update_check_now`, `update_apply` | [[Build e release]] |
 | rede | `net_*` | [[Velocidade]] |
-| memória | `mem_scan`, `mem_groups`, `mem_deep`, `mem_standby`, `mem_trim`, `mem_trim_all`, `mem_lower`, `mem_freeze`, `mem_unfreeze`, `mem_pagefile_apply`, `mem_pagefile_auto`, `mem_svchost_set`, `mem_sysmain_set`, `mem_auto_get`, `mem_auto_set`, `svc_list`, `svc_set`, `svc_bulk` (módulos [[svcopt.py]] e [[mem.py]]; `_freezer` no `__init__`, descongela em `_shutdown`) | [[Velocidade]] |
+| memória | `mem_scan`, `mem_groups`, `mem_deep` (evento `mem:deep` com paginação e `legacy`), `mem_lower`, `mem_freeze`, `mem_unfreeze`, `mem_pagefile_auto`, `mem_legacy_undo`, `mem_auto_get`, `mem_auto_set` (módulos [[mem.py]] e [[svcopt.py]]; `_freezer` no `__init__`, descongela em `_shutdown`) | [[Velocidade]] |
+| jogos | `game_scan` (evento `game:scan`), `game_gpu_apply`, `game_gpu_add`, `game_gpu_undo`, `game_refresh_set`, `game_hags_set`, `game_mode_enable`, `game_open` ([[gamecheck.py]]; `self._games` guarda a última varredura) | [[Velocidade]] |
 | saúde | `health_scan`, `updates_check`, `repair` | [[Saúde e proteção]] |
 | desempenho | `power_*`, `tweaks_list`, `tweak_set`, `systweaks_scan`, `systweak_set`, `trim_enable`, `optimize_disk`, `clock_*` | [[Velocidade]] |
 | limpeza | `clean_list`, `clean_run`, `extras_info`, `hibernate_off`, `open_cleanmgr`, `dism_cleanup`, `restore_point` | [[Espaço e limpeza]] |

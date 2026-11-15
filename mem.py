@@ -1,4 +1,4 @@
-"""Memória RAM: lista de espera (standby), limpeza e congelamento por programa, arquivo de paginação e SvcHost."""
+"""Memória RAM: uso agora, prioridade e congelamento por programa, arquivo de paginação e o desfazer do SvcHost antigo."""
 import ctypes
 import json
 import os
@@ -11,99 +11,24 @@ import psutil
 
 import backend as bk
 
-PAGE = 4096
 MB = 1024 * 1024
 GB = 1024 * MB
 
-_nt = ctypes.WinDLL("ntdll")
 _k32 = ctypes.WinDLL("kernel32", use_last_error=True)
-_adv = ctypes.WinDLL("advapi32", use_last_error=True)
-_psapi = ctypes.WinDLL("psapi", use_last_error=True)
 _u32 = ctypes.WinDLL("user32")
 
-_nt.NtQuerySystemInformation.argtypes = [wintypes.ULONG, ctypes.c_void_p, wintypes.ULONG, ctypes.c_void_p]
-_nt.NtQuerySystemInformation.restype = ctypes.c_long
-_nt.NtSetSystemInformation.argtypes = [wintypes.ULONG, ctypes.c_void_p, wintypes.ULONG]
-_nt.NtSetSystemInformation.restype = ctypes.c_long
 _k32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
 _k32.OpenProcess.restype = wintypes.HANDLE
 _k32.CloseHandle.argtypes = [wintypes.HANDLE]
-_k32.GetCurrentProcess.restype = wintypes.HANDLE
 _k32.SetProcessInformation.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
-_psapi.EmptyWorkingSet.argtypes = [wintypes.HANDLE]
-_adv.OpenProcessToken.argtypes = [wintypes.HANDLE, wintypes.DWORD, ctypes.POINTER(wintypes.HANDLE)]
-_adv.LookupPrivilegeValueW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR, ctypes.c_void_p]
-_adv.AdjustTokenPrivileges.argtypes = [wintypes.HANDLE, wintypes.BOOL, ctypes.c_void_p, wintypes.DWORD, ctypes.c_void_p, ctypes.c_void_p]
 _u32.GetForegroundWindow.restype = wintypes.HWND
 _u32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
 
-_SystemMemoryListInformation = 80
-_PURGE_LOW_STANDBY, _PURGE_STANDBY = 5, 4
 
-
-# ---------------------------------------------------------------- permissões
-class _LUID(ctypes.Structure):
-    _fields_ = [("lo", wintypes.DWORD), ("hi", wintypes.LONG)]
-
-
-class _TOKEN_PRIV(ctypes.Structure):
-    _fields_ = [("count", wintypes.DWORD), ("luid", _LUID), ("attr", wintypes.DWORD)]
-
-
-def _enable_privilege(name):
-    """Liga um privilégio que o administrador já tem mas o Windows deixa desligado no processo. False se não deu."""
-    tok = wintypes.HANDLE()
-    if not _adv.OpenProcessToken(_k32.GetCurrentProcess(), 0x28, ctypes.byref(tok)):      # ADJUST_PRIVILEGES | QUERY
-        return False
-    try:
-        luid = _LUID()
-        if not _adv.LookupPrivilegeValueW(None, name, ctypes.byref(luid)):
-            return False
-        tp = _TOKEN_PRIV(1, luid, 2)                                                       # SE_PRIVILEGE_ENABLED
-        ctypes.set_last_error(0)
-        _adv.AdjustTokenPrivileges(tok, False, ctypes.byref(tp), 0, None, None)
-        return ctypes.get_last_error() == 0                                                # 1300 = o processo não tem esse privilégio
-    finally:
-        _k32.CloseHandle(tok)
-
-
-# ------------------------------------------------------------- RAM e lista de espera
-class _MEMLIST(ctypes.Structure):
-    _fields_ = [("zero", ctypes.c_size_t), ("free", ctypes.c_size_t), ("modified", ctypes.c_size_t),
-                ("modified_nowrite", ctypes.c_size_t), ("bound", ctypes.c_size_t),
-                ("by_priority", ctypes.c_size_t * 8), ("repurposed", ctypes.c_size_t * 8), ("modified_pf", ctypes.c_size_t)]
-
-
-def _standby_bytes():
-    """Tamanho da lista de espera (cache de arquivos que o Windows guarda na RAM). None sem administrador."""
-    if not bk.is_admin() or not _enable_privilege("SeProfileSingleProcessPrivilege"):
-        return None
-    s = _MEMLIST()
-    if _nt.NtQuerySystemInformation(_SystemMemoryListInformation, ctypes.byref(s), ctypes.sizeof(s), None) != 0:
-        return None
-    return sum(s.by_priority) * PAGE
-
-
+# ---------------------------------------------------------------------- RAM agora
 def ram_info():
     vm = psutil.virtual_memory()
-    return {"total": vm.total, "avail": vm.available, "percent": vm.percent, "standby": _standby_bytes()}
-
-
-def purge_standby(full):
-    """Esvazia a lista de espera. `full=False` só solta a de prioridade baixa: bem mais suave, não faz o jogo engasgar."""
-    if not bk.is_admin():
-        return {"ok": False, "msg": "Precisa de administrador. Use “Reabrir como administrador”."}
-    if not _enable_privilege("SeProfileSingleProcessPrivilege"):
-        return {"ok": False, "msg": "O Windows não liberou a permissão de memória para este programa."}
-    before = ram_info()
-    cmd = ctypes.c_int(_PURGE_STANDBY if full else _PURGE_LOW_STANDBY)
-    st = _nt.NtSetSystemInformation(_SystemMemoryListInformation, ctypes.byref(cmd), 4)
-    if st != 0:
-        return {"ok": False, "msg": f"O Windows recusou (código 0x{st & 0xFFFFFFFF:08X})."}
-    time.sleep(0.4)
-    after = ram_info()
-    freed = max(0, (before["standby"] or 0) - (after["standby"] or 0))
-    return {"ok": True, "msg": f"Lista de espera esvaziada: {bk.fmt_size(freed)} liberados.", "ram": after}
+    return {"total": vm.total, "avail": vm.available, "percent": vm.percent}
 
 
 # ------------------------------------------------------------ programas em segundo plano
@@ -152,16 +77,6 @@ def _open(pid, access):
     return _k32.OpenProcess(access, False, pid)
 
 
-def _empty_working_set(pid):
-    h = _open(pid, 0x0400 | 0x0100)                 # QUERY_INFORMATION | SET_QUOTA
-    if not h:
-        return False
-    try:
-        return bool(_psapi.EmptyWorkingSet(h))
-    finally:
-        _k32.CloseHandle(h)
-
-
 def _set_memory_priority(pid, value):
     """1 = muito baixa ... 5 = normal. O Windows tira da RAM primeiro o que tem prioridade baixa."""
     h = _open(pid, 0x0200)                          # SET_INFORMATION
@@ -186,24 +101,6 @@ def group_rows(frozen):
                      "can_freeze": can_freeze, "freeze_warn": warn, "foreground": any(p.pid == fg for p in procs),
                      "frozen": frozen.get(gid)})
     return rows
-
-
-def trim_group(gid):
-    """Devolve à RAM livre o que o programa guardou sem usar agora. Ele pega de volta o que precisar."""
-    if gid not in GROUPS:
-        return {"ok": False, "msg": "Programa desconhecido."}
-    procs = _procs(gid)
-    if not procs:
-        return {"ok": False, "msg": "Esse programa não está aberto."}
-    fg = _foreground_pid()
-    if any(p.pid == fg for p in procs):
-        return {"ok": False, "msg": f"Você está usando o {GROUPS[gid][0]} agora. Troque de janela e tente de novo."}
-    before = _rss(procs)
-    for p in procs:
-        _empty_working_set(p.pid)
-    time.sleep(0.3)
-    freed = max(0, before - _rss(procs))
-    return {"ok": True, "msg": f"{GROUPS[gid][0]}: {bk.fmt_size(freed)} liberados.", "freed": freed}
 
 
 def lower_group(gid, on):
@@ -320,8 +217,6 @@ class Freezer:
                 pass
         if not held:
             return {"ok": False, "msg": "O Windows não deixou congelar. Tente reabrir como administrador."}
-        for pid, _ in held:                                    # parado, o programa não usa mais a RAM: devolve tudo
-            _empty_working_set(pid)
         now = time.time()
         with self._lock:
             self._items[gid] = {"since": now, "until": now + minutes * 60, "procs": held, "auto": auto}
@@ -484,21 +379,6 @@ def _ram_gb():
     return max(1, round(psutil.virtual_memory().total / GB))
 
 
-def pagefile_suggest(ram_gb, free_mb):
-    """(inicial, máximo) em MB. Segue o tamanho da RAM; nunca passa de 40% do espaço livre do disco."""
-    if ram_gb <= 4:
-        init, mx = ram_gb * 1536, ram_gb * 3072
-    elif ram_gb <= 8:
-        init, mx = ram_gb * 1024, ram_gb * 2048
-    elif ram_gb <= 16:
-        init, mx = ram_gb * 512, ram_gb * 1024
-    else:
-        init, mx = 8192, 16384
-    cap = int(free_mb * 0.4)
-    mx = max(1024, min(mx, cap))
-    return min(init, mx), mx
-
-
 def pagefile_info():
     drive = os.environ.get("SystemDrive", "C:")
     try:
@@ -514,36 +394,8 @@ def pagefile_info():
     except ValueError:
         d = {}
     as_list = lambda v: v if isinstance(v, list) else ([v] if v else [])
-    gb = _ram_gb()
-    init, mx = pagefile_suggest(gb, free_mb)
-    return {"ram_gb": gb, "drive": drive, "free_mb": int(free_mb), "auto": bool(d.get("auto", True)),
-            "set": as_list(d.get("set")), "use": as_list(d.get("use")), "suggest": {"initial": init, "maximum": mx}}
-
-
-def pagefile_apply(initial, maximum):
-    """Define tamanho fixo (em MB) no disco do Windows. Vale depois de reiniciar."""
-    try:
-        initial, maximum = int(initial), int(maximum)
-    except (TypeError, ValueError):
-        return False, "Valores inválidos."
-    drive = os.environ.get("SystemDrive", "C:")
-    free_mb = psutil.disk_usage(drive + "\\").free // MB
-    if initial < 1024 or maximum < initial or maximum > 131072:
-        return False, "O tamanho inicial precisa ser de pelo menos 1024 MB e o máximo não pode ser menor que ele."
-    if maximum > free_mb * 0.8:
-        return False, f"O disco {drive} só tem {free_mb} MB livres. Escolha um máximo menor."
-    name = f"{drive}\\pagefile.sys"
-    script = ("try{"
-              "$cs=Get-WmiObject Win32_ComputerSystem -EnableAllPrivileges;"
-              "if($cs.AutomaticManagedPagefile){$cs.AutomaticManagedPagefile=$false;[void]$cs.Put()};"
-              f"$pf=Get-WmiObject Win32_PageFileSetting|Where-Object{{$_.Name -eq '{name}'}};"
-              f"if($pf){{$pf.InitialSize={initial};$pf.MaximumSize={maximum};[void]$pf.Put()}}"
-              f"else{{[void](Set-WmiInstance -Class Win32_PageFileSetting -Arguments @{{Name='{name}';InitialSize={initial};MaximumSize={maximum}}} -EnableAllPrivileges)}};"
-              "'OK'}catch{'FAIL|'+$_.Exception.Message}")
-    out = bk.ps(script, timeout=60).strip()
-    if out.endswith("OK"):
-        return True, f"Arquivo de paginação: {initial} MB a {maximum} MB. Reinicie o PC para valer."
-    return False, out.split("|", 1)[-1][:200] or "Falhou."
+    return {"ram_gb": _ram_gb(), "drive": drive, "free_mb": int(free_mb), "auto": bool(d.get("auto", True)),
+            "set": as_list(d.get("set")), "use": as_list(d.get("use"))}
 
 
 def pagefile_auto():
@@ -556,21 +408,11 @@ def pagefile_auto():
     return False, out.split("|", 1)[-1][:200] or "Falhou."
 
 
-# --------------------------------------------------------------- agrupar serviços (SvcHost)
+# ------------------------------------------------- SvcHost: só o desfazer (o ajuste saiu do app)
+# Versões antigas subiam o SvcHostSplitThresholdInKB. Não deixava o PC mais rápido (só juntava serviços em menos
+# processos), então saiu; quem aplicou pode voltar ao padrão do Windows.
 SVC_KEY, SVC_VALUE = r"SYSTEM\CurrentControlSet\Control", "SvcHostSplitThresholdInKB"
 SVC_DEFAULT = 0x380000
-SVC_TABLE = [(4, 0x400000), (6, 0x600000), (8, 0x800000), (12, 0xC00000), (16, 0x1000000),
-             (24, 0x1800000), (32, 0x2000000), (64, 0x4000000)]
-
-
-def svchost_tier(ram_kb):
-    """Maior faixa da tabela que cabe na RAM (o Windows mostra um pouco menos que o instalado, por isso 10% de folga)."""
-    gb = ram_kb / 1048576
-    best = None
-    for tgb, val in SVC_TABLE:
-        if gb >= tgb * 0.9:
-            best = (tgb, val)
-    return best
 
 
 def svchost_current():
@@ -581,21 +423,15 @@ def svchost_current():
         return None
 
 
-def svchost_info():
-    ram_kb = psutil.virtual_memory().total // 1024
-    tier = svchost_tier(ram_kb)
+def svchost_changed():
     cur = svchost_current()
-    return {"ram_kb": ram_kb, "ram_gb": round(ram_kb / 1048576, 1), "current": cur, "current_hex": None if cur is None else f"0x{cur:X}",
-            "tier_gb": tier[0] if tier else None, "value": tier[1] if tier else None, "hex": f"0x{tier[1]:X}" if tier else None,
-            "default_hex": f"0x{SVC_DEFAULT:X}", "table": [{"gb": g, "hex": f"0x{v:X}"} for g, v in SVC_TABLE]}
+    return cur is not None and cur != SVC_DEFAULT
 
 
-def svchost_set(value):
-    if value not in [v for _, v in SVC_TABLE] + [SVC_DEFAULT]:
-        return False, "Valor fora da tabela."
+def svchost_reset():
     try:
         with winreg.CreateKeyEx(winreg.HKEY_LOCAL_MACHINE, SVC_KEY, 0, winreg.KEY_SET_VALUE) as k:
-            winreg.SetValueEx(k, SVC_VALUE, 0, winreg.REG_DWORD, value)
+            winreg.SetValueEx(k, SVC_VALUE, 0, winreg.REG_DWORD, SVC_DEFAULT)
     except OSError as e:
         return False, f"O Windows não deixou gravar no registro ({e.strerror or e})."
-    return True, f"Gravado {SVC_VALUE} = 0x{value:X}. Reinicie o PC para valer."
+    return True, "Agrupamento de serviços voltou ao padrão do Windows. Reinicie o PC para valer."

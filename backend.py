@@ -311,14 +311,15 @@ def make_cleaners():
         Cleaner("recycle", "Lixeira",
                 "Tudo que você já apagou e ainda está na lixeira.", special="recycle"),
         Cleaner("browsers", "Cache dos navegadores",
-                "Chrome, Edge, Brave, Opera e Firefox. Feche os navegadores antes. Não apaga senhas nem histórico.",
-                getter=_browser_caches),
+                "Chrome, Edge, Brave, Opera e Firefox. Feche os navegadores antes. Não apaga senhas nem histórico. "
+                "Os sites ficam mais lentos na primeira visita depois, até o cache encher de novo.",
+                default=False, getter=_browser_caches),
         Cleaner("appcache", "Cache de apps (Discord, Spotify, Steam, Teams, VS Code, Adobe)",
                 "Só cache, não apaga contas nem músicas baixadas. Feche esses apps antes.",
                 getter=_app_caches),
         Cleaner("thumbs", "Miniaturas e ícones em cache",
-                "O Windows recria sozinho quando precisar.",
-                getter=lambda: _expand([
+                "O Windows recria sozinho, mas as pastas com fotos abrem mais devagar até isso acontecer.",
+                default=False, getter=lambda: _expand([
                     os.path.join(local, r"Microsoft\Windows\Explorer\thumbcache_*.db"),
                     os.path.join(local, r"Microsoft\Windows\Explorer\iconcache_*.db"),
                 ])),
@@ -337,12 +338,6 @@ def make_cleaners():
                     os.path.join(win, "Minidump"),
                     os.path.join(win, "MEMORY.DMP"),
                 ])),
-        Cleaner("evtlogs", "Histórico de eventos do Windows (Visualizador de Eventos)",
-                "Apaga os registros antigos que o Windows guarda sobre erros e avisos. Precisa de administrador.",
-                default=False, admin=True, special="eventlogs",
-                warn="Apaga o histórico do Visualizador de Eventos. Depois disso fica mais difícil descobrir a causa "
-                     "de travamentos e telas azuis que já aconteceram. Não afeta o funcionamento do Windows e "
-                     "não dá pra desfazer."),
         Cleaner("logs", "Logs antigos do Windows",
                 "Registros de instalação (CBS). Precisa de administrador.", default=False, admin=True,
                 getter=lambda: _expand([os.path.join(win, r"Logs\CBS")])),
@@ -368,8 +363,6 @@ def recycle_size():
 def measure(c, cancel=None):
     if c.special == "recycle":
         c.size = recycle_size()
-    elif c.special == "eventlogs":
-        c.size = path_size(os.path.join(_env("SystemRoot") or r"C:\Windows", r"System32\winevt\Logs"), cancel)
     else:
         c.size = sum(path_size(p, cancel) for p in c.targets())
     return c.size
@@ -439,8 +432,6 @@ def run_cleaner(c):
         if c.special == "recycle":
             # SHERB_NOCONFIRMATION | NOPROGRESSUI | NOSOUND
             ctypes.windll.shell32.SHEmptyRecycleBinW(None, None, 7)
-        elif c.special == "eventlogs":
-            ps('wevtutil el | ForEach-Object { wevtutil cl "$_" 2>$null }', timeout=240)
         else:
             for p in c.targets():
                 if os.path.isdir(p):

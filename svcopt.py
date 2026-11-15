@@ -1,68 +1,43 @@
-"""Serviços do Windows que dá pra desligar (libera CPU e RAM). Só os da lista SERVICES; guarda como estava pra desfazer."""
+"""Desfazer dos serviços que versões antigas do WebDark desligavam.
+
+Desligar serviço parado em Manual não ganha desempenho e pode quebrar impressora, VPN, Xbox etc., então a função saiu.
+O que sobrou: achar os serviços que o app desligou (ficaram guardados em services.json) e voltar ao que eram."""
 import json
 import os
 import subprocess
 import winreg
 
-import psutil
-
 import backend as bk
 
 SVC_ROOT = r"SYSTEM\CurrentControlSet\Services"
 
-# risco: low = quase ninguém usa; mid = depende do que você usa; high = pode quebrar algo comum
-SERVICES = [
-    dict(name="Spooler", title="Fila de impressão", risk="mid", sug=False,
-         desc="Gerencia a impressão.", breaks="Você não consegue imprimir nem salvar em PDF pela impressora virtual."),
-    dict(name="Fax", title="Fax", risk="low", sug=False,
-         desc="Enviar e receber fax pelo PC.", breaks="Nada, quase ninguém usa."),
-    dict(name="RemoteRegistry", title="Registro remoto", risk="low", sug=False,
-         desc="Deixa outro computador da rede mexer no registro deste.", breaks="Administração remota do PC. Desligado também é mais seguro."),
-    dict(name="TermService", title="Área de Trabalho Remota", risk="low", sug=False,
-         desc="Permite que outro PC controle este.", breaks="Acesso remoto pelo Windows (RDP) a este PC."),
-    dict(name="RasMan", title="Conexões de acesso remoto (VPN)", risk="high", sug=False,
-         desc="Gerencia VPN e conexão discada/PPPoE.", breaks="VPNs (inclusive a do Windows) e internet por PPPoE deixam de conectar."),
-    dict(name="Bowser", title="Navegador de computadores (SMB antigo)", risk="low", sug=False,
-         desc="Parte antiga da rede local do Windows.", breaks="Ver computadores da rede por nome em redes antigas."),
-    dict(name="SensrSvc", title="Monitor de sensores", risk="low", sug=False,
-         desc="Lê sensores do PC, como o de brilho automático.", breaks="Brilho e rotação automáticos da tela."),
-    dict(name="TabletInputService", title="Teclado de toque e caneta", risk="mid", sug=False,
-         desc="Teclado na tela, escrita à mão e caneta.", breaks="Teclado virtual, caneta e tela sensível ao toque."),
-    dict(name="DiagTrack", title="Telemetria (Experiências do Usuário)", risk="low", sug=False,
-         desc="Envia dados de uso para a Microsoft.", breaks="Quase nada: relatórios de uso."),
-    dict(name="diagsvc", title="Serviço de diagnóstico", risk="low", sug=False,
-         desc="Executa diagnósticos automáticos do Windows.", breaks="Os 'solucionadores de problemas' automáticos."),
-    dict(name="WdiServiceHost", title="Host do serviço de diagnóstico", risk="low", sug=False,
-         desc="Parte dos diagnósticos do Windows.", breaks="Diagnóstico automático de problemas."),
-    dict(name="MapsBroker", title="Mapas baixados", risk="low", sug=False,
-         desc="Baixa mapas para uso sem internet.", breaks="Mapas offline do Windows."),
-    dict(name="SCardSvr", title="Cartão inteligente", risk="mid", sug=False,
-         desc="Lê cartões e tokens de certificado.", breaks="Certificado digital em cartão ou token (e-CPF, e-CNPJ A3) e alguns logins corporativos."),
-    dict(name="WerSvc", title="Relatório de erros do Windows", risk="low", sug=False,
-         desc="Envia relatórios quando um programa trava.", breaks="Os relatórios de erro. Útil só pra quem investiga travamentos."),
-    dict(name="XblAuthManager", title="Xbox Live: autenticação", risk="mid", sug=False,
-         desc="Login na conta Xbox.", breaks="Jogos da Microsoft Store e Game Pass, Minecraft Bedrock e login Xbox."),
-    dict(name="XblGameSave", title="Xbox Live: jogos salvos", risk="mid", sug=False,
-         desc="Salva o progresso dos jogos Xbox na nuvem.", breaks="Salvamento na nuvem de jogos da Microsoft Store e Game Pass."),
-    # sugeridos além da sua lista
-    dict(name="XboxNetApiSvc", title="Xbox Live: rede", risk="mid", sug=True,
-         desc="Rede dos jogos Xbox.", breaks="Multiplayer de jogos da Microsoft Store e Game Pass."),
-    dict(name="PhoneSvc", title="Serviço de telefone", risk="low", sug=True,
-         desc="Liga o PC ao celular (Vincular ao Celular).", breaks="O recurso 'Vincular ao Celular'."),
-    dict(name="TrkWks", title="Rastreamento de links", risk="low", sug=True,
-         desc="Acompanha atalhos de arquivos que mudaram de lugar.", breaks="Atalhos para arquivos movidos entre discos de rede."),
-    dict(name="WpcMonSvc", title="Controle dos pais", risk="low", sug=True,
-         desc="Filtros e limites da Segurança da Família.", breaks="Controle dos pais do Windows."),
-    dict(name="icssvc", title="Ponto de acesso móvel", risk="low", sug=True,
-         desc="Compartilha a internet do PC por Wi-Fi.", breaks="O 'Ponto de acesso móvel' do Windows."),
-    dict(name="WMPNetworkSvc", title="Compartilhamento do Media Player", risk="low", sug=True,
-         desc="Compartilha músicas e vídeos pela rede.", breaks="Transmitir mídia do Windows Media Player para outros aparelhos."),
-    dict(name="RetailDemo", title="Modo demonstração de loja", risk="low", sug=True,
-         desc="Serve só para PCs de vitrine.", breaks="Nada."),
-    dict(name="wisvc", title="Windows Insider", risk="low", sug=True,
-         desc="Versões de teste do Windows.", breaks="Receber versões de teste (Insider)."),
-]
-BY_NAME = {s["name"]: s for s in SERVICES}
+# nome do serviço -> título que aparecia no app
+TITLES = {
+    "Spooler": "Fila de impressão",
+    "Fax": "Fax",
+    "RemoteRegistry": "Registro remoto",
+    "TermService": "Área de Trabalho Remota",
+    "RasMan": "Conexões de acesso remoto (VPN)",
+    "Bowser": "Navegador de computadores (SMB antigo)",
+    "SensrSvc": "Monitor de sensores",
+    "TabletInputService": "Teclado de toque e caneta",
+    "DiagTrack": "Telemetria (Experiências do Usuário)",
+    "diagsvc": "Serviço de diagnóstico",
+    "WdiServiceHost": "Host do serviço de diagnóstico",
+    "MapsBroker": "Mapas baixados",
+    "SCardSvr": "Cartão inteligente",
+    "WerSvc": "Relatório de erros do Windows",
+    "XblAuthManager": "Xbox Live: autenticação",
+    "XblGameSave": "Xbox Live: jogos salvos",
+    "XboxNetApiSvc": "Xbox Live: rede",
+    "PhoneSvc": "Serviço de telefone",
+    "TrkWks": "Rastreamento de links",
+    "WpcMonSvc": "Controle dos pais",
+    "icssvc": "Ponto de acesso móvel",
+    "WMPNetworkSvc": "Compartilhamento do Media Player",
+    "RetailDemo": "Modo demonstração de loja",
+    "wisvc": "Windows Insider",
+}
 
 _START_TO_SC = {0: "boot", 1: "system", 2: "auto", 3: "demand", 4: "disabled"}
 _START_LABEL = {0: "Boot", 1: "Sistema", 2: "Automático", 3: "Manual", 4: "Desativado"}
@@ -104,24 +79,15 @@ def _read(name):
         return None
 
 
-def _running(name):
-    try:
-        return psutil.win_service_get(name).status() == "running"
-    except Exception:
-        return False
-
-
-def list_state():
-    orig, rows = _load_orig(), []
-    for s in SERVICES:
-        r = _read(s["name"])
-        if r is None:
-            continue
-        start, delayed = r
-        rows.append({**s, "start": start, "start_label": _START_LABEL.get(start, str(start)), "off": start == 4,
-                     "running": _running(s["name"]), "was": _START_LABEL.get(orig.get(s["name"], {}).get("start")) or None,
-                     "can_restore": start != 4 or s["name"] in orig})   # já desligado de fábrica: não há o que voltar
-    return rows
+def disabled_by_app():
+    """Serviços que o WebDark desligou e ainda estão desligados: [{name, title, was}]."""
+    out = []
+    for name, prev in _load_orig().items():
+        cur = _read(name)
+        if cur and cur[0] == 4:
+            out.append({"name": name, "title": TITLES.get(name, name),
+                        "was": _START_LABEL.get(prev.get("start"), "Manual")})
+    return out
 
 
 def _sc_config(name, mode):
@@ -130,30 +96,15 @@ def _sc_config(name, mode):
     return r.returncode == 0, r.stdout.decode("cp850", errors="replace").strip()
 
 
-def set_off(name, off):
-    """Desliga (desativa e para) ou volta ao que era. -> (ok, mensagem). Precisa de administrador."""
-    s = BY_NAME.get(name)
-    if s is None:
-        return False, "Esse serviço não está na lista."
-    cur = _read(name)
-    if cur is None:
-        return False, "Esse serviço não existe neste Windows."
-    orig = _load_orig()
-    if off:
-        if cur[0] != 4:
-            orig[name] = {"start": cur[0], "delayed": cur[1]}
-            _save_orig(orig)
-        ok, out = _sc_config(name, "disabled")
-        if not ok:
-            return False, "O Windows recusou: " + (out.splitlines()[-1] if out else "sem detalhes")
-        subprocess.run(["net.exe", "stop", name, "/y"], capture_output=True, stdin=subprocess.DEVNULL,
-                       creationflags=bk.CREATE_NO_WINDOW, timeout=60)
-        return True, f"{s['title']} desligado."
-    prev = orig.get(name) or {"start": 3, "delayed": False}
-    mode = "delayed-auto" if prev["start"] == 2 and prev.get("delayed") else _START_TO_SC.get(prev["start"], "demand")
-    ok, out = _sc_config(name, mode)
-    if not ok:
-        return False, "O Windows recusou: " + (out.splitlines()[-1] if out else "sem detalhes")
-    orig.pop(name, None)
+def restore_all():
+    """Volta cada serviço desligado pelo app ao tipo de início que tinha. -> (quantos voltaram, quantos eram)."""
+    orig, todo = _load_orig(), disabled_by_app()
+    done = 0
+    for s in todo:
+        prev = orig[s["name"]]
+        mode = "delayed-auto" if prev["start"] == 2 and prev.get("delayed") else _START_TO_SC.get(prev["start"], "demand")
+        if _sc_config(s["name"], mode)[0]:
+            orig.pop(s["name"], None)
+            done += 1
     _save_orig(orig)
-    return True, f"{s['title']} voltou ao que era ({_START_LABEL.get(prev['start'], 'Manual')})."
+    return done, len(todo)

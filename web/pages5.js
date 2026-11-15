@@ -6,7 +6,7 @@ Pages.security = (() => {
   const STATE = { ok: ["Tudo tranquilo", "#4ade80"], warn: ["Esquentando — fique de olho", "#fbbf24"], hot: ["QUENTE! Reduzindo o clock pra esfriar", "#f87171"],
     crit: ["PERIGO! Clock no mínimo de segurança", "#fca5a5"], nosensor: ["Sem leitura de temperatura", "#8d8da8"] };
   const OVL = { hot: "Só quando esquentar", always: "Sempre", never: "Nunca" };
-  const KIND = { ok: "✔", warn: "⚠", hot: "🔥", crit: "🚨", clock: "⏬", info: "•" };
+  const KIND = { ok: "ok", warn: "aviso", hot: "quente", crit: "crítico", clock: "clock", info: "•" };
   const TIPS = "• Notebook: use em superfície dura e plana, nunca em cama ou sofá.\n• Limpe a poeira das saídas de ar a cada 6 meses.\n• Limite o FPS do jogo (ex.: 60). Menos FPS = menos calor.\n• Plano de energia Equilibrado + clock máximo em 90% já tira vários graus (aba Desempenho).\n• Fechar navegador e apps pesados enquanto joga ajuda bastante.";
   const T_MIN = 50, T_MAX = 105, P_MIN = 20, P_MAX = 100, PL = 50, PR = 20, PT = 22, PB = 34, HIT = 13, MAXP = 8;
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -52,7 +52,7 @@ Pages.security = (() => {
   }
   function curveEvents() {
     const c = cv(), pos = (e) => { const r = c.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-    const commit = async () => { const r = await api.sec_save({ curve: S.cfg.curve }); S.cfg = { ...S.cfg, ...r }; info(); drawCurve(); if (!r.ok) toast("⚠ Curva inválida: voltei à anterior."); };
+    const commit = async () => { const r = await api.sec_save({ curve: S.cfg.curve }); S.cfg = { ...S.cfg, ...r }; info(); drawCurve(); if (!r.ok) toast("Curva inválida: voltei à anterior."); };
     c.onmousedown = (e) => { const [x, y] = pos(e); const i = hit(x, y); S.drag = i >= 0 ? i : null; if (S.drag !== null) c.onmousemove(e); };
     c.onmousemove = (e) => {
       const [x, y] = pos(e), pts = S.cfg.curve, i = S.drag;
@@ -115,34 +115,34 @@ Pages.security = (() => {
     if (!$("#evl")) return;
     const ev = S.events;
     $("#evl").textContent = ev && ev.events.length ? ev.events.map(([t, k, x]) => `${t.slice(5, 16)}  ${KIND[k] || "•"} ${x}`).join("\n") : "Nada ainda. Quando o PC esquentar, aparece aqui.";
-    $("#evtip").textContent = ev && ev.hot7 >= 3 ? `⚠ O PC passou do limite ${ev.hot7} vezes nos últimos 7 dias. Limpe a poeira dos coolers, use o notebook em superfície dura e, se for antigo, troque a pasta térmica.` : "";
-    $("#prc").textContent = S.procs ? (S.procs.map((p) => `${p.name.slice(0, 34).padEnd(36)}${p.cpu.toFixed(1).padStart(5)}% da CPU`).join("\n") || "Nada pesado agora. 👍") : "Lendo…";
+    $("#evtip").textContent = ev && ev.hot7 >= 3 ? `O PC passou do limite ${ev.hot7} vezes nos últimos 7 dias. Limpe a poeira dos coolers, use o notebook em superfície dura e, se for antigo, troque a pasta térmica.` : "";
+    $("#prc").textContent = S.procs ? (S.procs.map((p) => `${p.name.slice(0, 34).padEnd(36)}${p.cpu.toFixed(1).padStart(5)}% da CPU`).join("\n") || "Nada pesado agora. ") : "Lendo…";
   }
   const patch = async (p) => { const r = await api.sec_save(p); S.cfg = { ...S.cfg, ...r }; info(); drawCurve(); };
   on("sec:tick", (t) => { S.tick = t; live(); });
-  on("sec:cfg", (c) => { S.cfg = { ...S.cfg, ...c }; info(); drawCurve(); toast("✨ Curva montada pro seu PC"); });
+  on("sec:cfg", (c) => { S.cfg = { ...S.cfg, ...c }; info(); drawCurve(); toast("Curva montada pro seu PC"); });
 
   return {
     async mount(el) {
       S.cfg = await api.sec_state();
       el.innerHTML = head("Segurança", "Vigia a temperatura do PC. Se chegar perto do perigo, avisa num cantinho da tela e baixa o clock sozinho até esfriar. Tudo começa desligado.") + `<div class="scroll">
-        <h2>🌡 Temperatura agora</h2><div class="card" style="padding:14px 18px">
+        <h2>Temperatura agora</h2><div class="card" style="padding:14px 18px">
           <div style="display:flex;align-items:baseline;gap:30px"><span style="font-size:34px;font-weight:800" id="cpuBig">CPU —</span><span style="font-size:34px;font-weight:800" id="gpuBig">GPU —</span><span style="flex:1"></span><span class="muted" id="clk"></span></div>
           <div style="font-weight:700;margin:2px 0 8px" id="stt"></div><canvas id="hist" style="width:100%;height:150px"></canvas></div>
-        <h2>🛡 Proteção térmica</h2><div class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+        <h2>Proteção térmica</h2><div class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
           <div class="set" style="padding:0"><div class="sw" id="sw-on"></div><div class="t"><b>Ligada: segue a curva abaixo e baixa o clock sozinha</b><div class="muted" id="pc"></div></div></div>
-          <div class="tools"><button class="ghost" data-m="gamer">🎮 Gamer</button><button class="ghost" data-m="careful">🛡 Cuidadoso</button><button class="ghost" data-m="very">🧯 Bem cuidadoso</button><button class="ghost" id="sug">✨ Sugerir pro meu PC</button></div>
+          <div class="tools"><button class="ghost" data-m="gamer">Gamer</button><button class="ghost" data-m="careful">Cuidadoso</button><button class="ghost" data-m="very">Bem cuidadoso</button><button class="ghost" id="sug">Sugerir pro meu PC</button></div>
           <canvas id="curve" style="width:100%;height:300px;touch-action:none"></canvas>
           <div class="muted" id="curvel"></div>
           <div class="muted">Como usar: arraste os pontos amarelos. Duplo clique cria um ponto, botão direito apaga. Cada ponto diz: “se a CPU chegar nessa temperatura, o clock máximo vai para essa %”. Abaixo do primeiro ponto o clock fica livre; esfriou, ele volta sozinho.</div>
           <div class="set" style="padding:0"><span id="warnl" style="width:330px"></span><input type="range" id="warn" min="50" max="95" style="flex:1;width:auto"></div>
           <div class="set" style="padding:0"><span>Cantinho de aviso:</span><select id="ovl">${Object.entries(OVL).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
             <div class="sw" id="sw-snd"></div><span>Apitar ao esquentar</span></div>
-          <div class="tools"><button class="ghost" id="exp">📋 Copiar meu perfil</button><button class="ghost" id="imp">📥 Colar perfil de um amigo</button></div>
+          <div class="tools"><button class="ghost" id="exp">Copiar meu perfil</button><button class="ghost" id="imp">Colar perfil de um amigo</button></div>
           <div class="muted">O cantinho aparece por cima de jogos em janela ou tela cheia sem bordas. Em tela cheia exclusiva (alguns jogos) o Windows esconde — nesse caso o PC apita.</div></div>
-        <h2>📜 O que aconteceu</h2><div class="muted" style="color:#fbbf24" id="evtip"></div><div class="logbox" id="evl" style="max-height:140px"></div>
-        <h2>🔎 Quem está pesando agora</h2><div class="logbox" id="prc" style="max-height:none"></div>
-        <h2>💡 Como esfriar o PC</h2><div class="muted" style="white-space:pre-line">${esc(TIPS)}</div></div>`;
+        <h2>O que aconteceu</h2><div class="muted" style="color:#fbbf24" id="evtip"></div><div class="logbox" id="evl" style="max-height:140px"></div>
+        <h2>Quem está pesando agora</h2><div class="logbox" id="prc" style="max-height:none"></div>
+        <h2>Como esfriar o PC</h2><div class="muted" style="white-space:pre-line">${esc(TIPS)}</div></div>`;
       info(); drawCurve(); curveEvents(); paintExtra();
       $("#sw-on").onclick = () => patch({ enabled: !S.cfg.enabled });
       $("#sw-snd").onclick = () => patch({ sound: !S.cfg.sound });
@@ -152,7 +152,7 @@ Pages.security = (() => {
       $("#sug").onclick = () => { busy(1); api.sec_suggest(); setTimeout(() => busy(-1), 4000); };
       $("#exp").onclick = async () => {
         const text = JSON.stringify({ v: 1, warn: S.cfg.warn, curve: S.cfg.curve });
-        try { await navigator.clipboard.writeText(text); toast("📋 Perfil copiado! Cole numa mensagem pro seu amigo."); }
+        try { await navigator.clipboard.writeText(text); toast("Perfil copiado! Cole numa mensagem pro seu amigo."); }
         catch { await inputBox({ title: "Seu perfil", body: "Copie o texto abaixo (Ctrl+C) e mande pro seu amigo. Cada PC esquenta de um jeito: peça pra ele ajustar a curva no PC dele.", value: text, readonly: true, ok: "Fechar" }); }
       };
       $("#imp").onclick = async () => {
@@ -160,7 +160,7 @@ Pages.security = (() => {
         if (!text) return;
         const r = await api.sec_import(text);
         if (!r.ok) return toast("Esse perfil não parece válido.");
-        S.cfg = { ...S.cfg, ...r }; info(); drawCurve(); toast("✅ Perfil aplicado");
+        S.cfg = { ...S.cfg, ...r }; info(); drawCurve(); toast("Perfil aplicado");
       };
       window.onresize = () => { drawCurve(); drawHist(); };
     },
@@ -186,13 +186,13 @@ on("confirm_close", async () => {
     orig.call(this, el);
     const bg = await api.bg_get();
     const box = document.createElement("div");
-    box.innerHTML = `<h2>🌙 Modo segundo plano</h2><div class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+    box.innerHTML = `<h2>Modo segundo plano</h2><div class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
       <div class="set" style="padding:0"><div class="t"><b>Fechar na bandeja e vigiar em silêncio</b><div class="muted">Ao fechar a janela, o programa vai pra bandeja (perto do relógio). De tempos em tempos confere o PC com prioridade mínima e só avisa se achar algo importante. O vigia de temperatura continua funcionando. Para sair de vez: botão direito no ícone > “Sair de vez”.</div></div><div class="sw ${bg.on ? "on" : ""}" id="s-bg"></div></div>
       <div class="set" style="padding:0"><div class="t"><b>Conferir a cada</b></div><select id="bgmin">${[[30, "30 min"], [60, "1 hora"], [180, "3 horas"]].map(([v, t]) => `<option value="${v}" ${v === bg.minutes ? "selected" : ""}>${t}</option>`).join("")}</select></div></div>`;
     $(".scroll", el).appendChild(box);
     const save = async () => {
       const on = $("#s-bg").classList.contains("on"), r = await api.bg_set(on, +$("#bgmin").value);
-      if (!r.ok) { $("#s-bg").classList.remove("on"); toast("😕 Não consegui criar o ícone da bandeja."); }
+      if (!r.ok) { $("#s-bg").classList.remove("on"); toast("Não consegui criar o ícone da bandeja."); }
     };
     $("#s-bg").onclick = () => { $("#s-bg").classList.toggle("on"); save(); };
     $("#bgmin").onchange = save;
@@ -215,13 +215,13 @@ function updBanner() {
   side.disabled = UPD_BUSY;
   side.querySelector("span").textContent = UPD_BUSY ? "Atualizando…" : `Atualizar para v${UPDATE.version}`;
   bar.hidden = UPD_HIDDEN && !UPD_BUSY;
-  bar.innerHTML = `<div class="msg"><b>🆕 Versão ${esc(UPDATE.version)} disponível!</b><div>Você está na v${esc(cur)}.${first ? " Novidades: " + esc(first) : ""}</div></div>
+  bar.innerHTML = `<div class="msg"><b>Versão ${esc(UPDATE.version)} disponível!</b><div>Você está na v${esc(cur)}.${first ? " Novidades: " + esc(first) : ""}</div></div>
     <span id="updtxt"></span>${UPD_BUSY ? "" : '<button class="later" id="updlater">Depois</button>'}
-    <button class="go" id="updgo" ${UPD_BUSY ? "disabled" : ""}>${UPDATE.can_self ? "⬇ Atualizar agora" : "⬇ Abrir página de download"}</button>`;
+    <button class="go" id="updgo" ${UPD_BUSY ? "disabled" : ""}>${UPDATE.can_self ? "Atualizar agora" : "Abrir página de download"}</button>`;
   $("#updgo").onclick = updStart;
   if (!UPD_BUSY) $("#updlater").onclick = () => { UPD_HIDDEN = true; updBanner(); toast("Ok. O botão “Atualizar” continua na lateral."); };
 }
 $("#updside").onclick = updStart;
 on("update:available", (d) => { UPDATE = d; updBanner(); });
 on("update:progress", (d) => { const t = $("#updtxt"); if (t) t.textContent = d.restart ? "Reiniciando…" : `Baixando… ${Math.round(d.frac * 100)}%`; });
-on("update:failed", (msg) => { UPD_BUSY = false; busy(-1); updBanner(); toast("⚠ Não consegui atualizar: " + msg); });
+on("update:failed", (msg) => { UPD_BUSY = false; busy(-1); updBanner(); toast("Não consegui atualizar: " + msg); });
