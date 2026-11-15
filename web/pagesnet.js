@@ -33,22 +33,17 @@ Pages.net = (() => {
       html += `<div class="set" style="margin-top:10px;padding:8px 0"><div class="t muted">O Windows não mostra a % do sinal do Wi-Fi sem a Localização ligada (o app não usa a sua localização). Sem ela, use a velocidade de conexão de cada adaptador, na lista acima: quanto mais perto do máximo do seu Wi-Fi, melhor o sinal.</div>
         <button class="ghost" id="n-loc">Abrir Localização</button></div>`;
     }
-    if (d.txpower.length) {
-      html += '<div style="margin-top:12px"><b>Potência de transmissão do Wi-Fi</b>' + d.txpower.map((t, i) => `<div class="set" style="padding:8px 0">
-        <div class="t"><b>${esc(t.DisplayName)}</b> <span class="muted">(${esc(t.Name)}) • agora: ${esc(t.DisplayValue)}</span>
-        ${/ibss/i.test(t.RegistryKeyword) ? '<div class="muted">Em adaptadores Intel essa opção costuma valer só pro modo “ad hoc” (Wi-Fi direto entre dois aparelhos). No Wi-Fi comum o driver já ajusta a potência sozinho.</div>' : ""}</div>
-        <select data-tx="${i}">${t.valid.map((v) => `<option ${v === t.DisplayValue ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
-        <button class="ghost" data-txgo="${i}">Aplicar${adminTag()}</button></div>`).join("") + "</div>";
-    } else if (d.adapters.some((a) => a.PhysicalMediaType !== "802.3")) {
-      html += '<div class="muted" style="margin-top:10px">O driver do seu Wi-Fi não deixa mudar a potência de transmissão (isso é normal).</div>';
+    if (d.txpower.length) {      // só aparece o que ficou fora do padrão do driver (versões antigas deixavam mudar)
+      html += '<div style="margin-top:12px"><b>Potência do Wi-Fi fora do padrão</b><div class="muted">Mudar a potência de transmissão não deixa a internet mais rápida e pode piorar o sinal. Recomendo voltar ao padrão do driver.</div>' + d.txpower.map((t, i) => `<div class="set" style="padding:8px 0">
+        <div class="t"><b>${esc(t.DisplayName)}</b> <span class="muted">(${esc(t.Name)}) • agora: ${esc(t.DisplayValue)} • padrão: ${esc(t.DefaultDisplayValue)}</span></div>
+        <button class="ghost" data-txgo="${i}">↩ Voltar ao padrão${adminTag()}</button></div>`).join("") + "</div>";
     }
     box.innerHTML = html;
     const loc = $("#n-loc");
     if (loc) loc.onclick = () => api.net_open("location");
     $$("[data-txgo]", box).forEach((b) => (b.onclick = async () => {
-      const t = d.txpower[+b.dataset.txgo], v = $(`[data-tx="${b.dataset.txgo}"]`).value;
-      if (!await confirmBox({ title: "Mudar a potência do Wi-Fi?", body: `${t.DisplayName}: ${t.DisplayValue} → ${v}\n\nO Wi-Fi pode piscar por um instante. Potência mais alta gasta mais bateria e esquenta o adaptador um pouco.`, ok: "Aplicar" })) return;
-      busy(1); const r = await api.net_tx_set(t.Name, t.RegistryKeyword, v); busy(-1);
+      const t = d.txpower[+b.dataset.txgo];
+      busy(1); const r = await api.net_tx_reset(t.Name, t.RegistryKeyword); busy(-1);
       if (ok(r)) { toast("✅ " + r.msg); load(); }
     }));
   }
@@ -58,7 +53,7 @@ Pages.net = (() => {
     const box = $("#n-dns");
     if (!box) return;
     const now = S.scan && S.scan.dns_now && S.scan.dns_now.length ? S.scan.dns_now.map((c) => `${esc(c.name)}: ${esc([].concat((c.servers && c.servers.value) || c.servers || []).join(", ") || "automático")}`).join(" • ") : "…";
-    let html = `<div class="muted">DNS é a “agenda telefônica” da internet: quanto mais rápido ele responde, mais rápido os sites começam a abrir. Seu DNS agora: ${now}</div>
+    let html = `<div class="muted">DNS é a “agenda telefônica” da internet: quanto mais rápido ele responde, mais rápido os sites começam a abrir. Não muda o ping dos jogos nem a velocidade de download. Seu DNS agora: ${now}</div>
       <div class="tools" style="margin-top:12px"><button class="btn" id="n-dnstest" ${S.dnsBusy ? "disabled" : ""}>${S.dnsBusy ? esc(S.dnsProg || "Testando…") : "⚡ Testar e achar o melhor"}</button>
         <button class="ghost" id="n-dnsreset">↩ Voltar ao automático${adminTag()}</button></div>`;
     if (S.dns) {

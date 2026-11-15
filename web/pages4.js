@@ -82,7 +82,7 @@ Pages.perf = (() => {
   }
   function paintTweaks() {
     const box = $("#tw");
-    if (box && S.tweaks) box.innerHTML = S.tweaks.map((t) => `<div class="card set" data-k="${t.key}"><div class="t"><b>${esc(t.name)}</b><div class="muted">${esc(t.desc)}</div></div>${sw(t.on, 'data-a="tw"')}</div>`).join("");
+    if (box && S.tweaks) box.innerHTML = S.tweaks.map((t) => `<div class="card set" data-k="${t.key}"><div class="t"><b>${esc(t.name)}</b>${t.privacy ? ' <span class="tag q">PRIVACIDADE</span>' : ""}<div class="muted">${esc(t.desc)}</div></div>${sw(t.on, 'data-a="tw"')}</div>`).join("");
   }
   function paintSys() {
     const box = $("#sy");

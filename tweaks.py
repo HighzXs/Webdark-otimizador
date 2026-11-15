@@ -15,6 +15,7 @@ class Tweak:
     regs: list = field(default_factory=list)   # (caminho, valor, otimizado, padrão)
     getter: object = None
     setter: object = None
+    privacy: bool = False                      # privacidade/conforto, não desempenho
 
     def is_on(self):
         """True se a otimização está aplicada."""
@@ -70,7 +71,7 @@ def make_tweaks():
               [(r"Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy", "01", 1, 0)]),
         Tweak("ads", "Parar propagandas e apps patrocinados do Windows",
               "Tira sugestões do menu Iniciar e impede o Windows de reinstalar Candy Crush e cia.",
-              [(CDM, v, 0, 1) for v in cdm_vals]),
+              [(CDM, v, 0, 1) for v in cdm_vals], privacy=True),
         Tweak("bg", "Impedir apps de rodar escondidos em segundo plano",
               "Economiza memória e bateria. Apps abertos por você continuam normais.",
               [(r"Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled", 1, 0)]),
@@ -86,8 +87,8 @@ def make_tweaks():
               getter=_anim_off, setter=_set_anim),
         Tweak("adid", "Desligar ID de propaganda personalizada",
               "O Windows para de usar seu perfil para escolher anúncios.",
-              [(r"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", 0, 1)]),
+              [(r"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", 0, 1)], privacy=True),
         Tweak("ext", "Mostrar a extensão dos arquivos (.exe, .jpg, .pdf…)",
               "Ajuda a perceber vírus disfarçado de foto. Reabra as pastas para ver.",
-              [(r"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", 0, 1)]),
+              [(r"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", 0, 1)], privacy=True),
     ]

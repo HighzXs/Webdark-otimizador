@@ -45,20 +45,15 @@ const TIPS = {
     ["Detalhes", "Clique num item da lista pra ler o que ele é e se vale desligar.", "#detail"]]],
   net: ["Rede", "Internet mais rápida e estável.", [
     ["Wi-Fi e adaptadores", "Mostra a velocidade de cada placa de rede e o sinal do Wi-Fi.", "#n-wifi"],
-    ["Melhor DNS", "Testa vários servidores de DNS de verdade e mostra qual responde mais rápido. Trocar não é obrigatório e dá pra voltar ao automático.", "#n-dnstest"],
+    ["Melhor DNS", "Testa vários servidores de DNS de verdade e mostra qual responde mais rápido. Ajuda os sites a começarem a abrir, não muda o ping dos jogos. Trocar não é obrigatório e dá pra voltar ao automático.", "#n-dnstest"],
     ["Otimização de Entrega", "Impede o Windows de usar sua internet pra repassar atualizações a outros PCs.", "#n-do"],
     ["Limitar programas", "Limita o que um programa envia. Pode causar instabilidade: use com cuidado.", "#n-lim"],
     ["Drivers de rede", "Mostra a idade do driver do Wi-Fi e do cabo e leva você ao Windows Update pra baixar drivers.", "#n-drv"],
     ["Reparar a rede", "Os comandos clássicos de reparo (ipconfig e netsh). Os mais fortes pedem reiniciar o PC.", "#n-fix"]]],
-  mem: ["Memória", "Libere RAM e ajuste como o Windows usa a memória.", [
-    ["Lista de espera", "Cache de arquivos na RAM. A limpeza suave é segura até com jogo aberto; a completa pode engasgar por uns segundos.", "#m-sb-soft"],
-    ["Liberar RAM de todos", "Devolve a RAM que navegadores, Discord e Spotify guardam sem usar. O programa que você está usando não é tocado.", "#m-trimall"],
-    ["Congelar", "Para um programa de vez enquanto você joga (a RAM volta na hora). Descongela sozinho no prazo ou ao fechar o WebDark.", "#m-apps"],
+  mem: ["Memória", "Veja o uso da RAM e congele o que pesa enquanto você joga.", [
+    ["Congelar", "Para um programa de vez enquanto você joga: ele não usa mais o processador. Descongela sozinho no prazo ou ao fechar o WebDark.", "#m-apps"],
     ["Congelar sozinho ao jogar", "Detecta jogo em tela cheia e congela só os programas que você marcou, menos quem está em chamada. Descongela quando o jogo sai.", "#m-auto"],
-    ["Serviços que dá pra desligar", "Lista com o risco e o que quebra em cada um. Dá pra religar com o mesmo interruptor.", "#m-svcs"],
-    ["Arquivo de paginação", "Mostra uma sugestão pela sua RAM. Precisa reiniciar. Dá pra voltar ao automático.", "#m-pfgo"],
-    ["Agrupar serviços", "Junta serviços em menos processos svchost e economiza RAM. Precisa reiniciar.", "#m-svcgo"],
-    ["SysMain", "Pré-carrega programas na RAM. Em SSD pode desligar; em HD deixe ligado.", "#m-sysmain"]]],
+    ["Arquivo de paginação", "Mostra se está no automático (o melhor). Se estiver fixo, dá pra voltar ao automático.", "#m-pf"]]],
   health: ["Saúde", "Veja se o disco está bom e conserte problemas do Windows.", [
     ["Saúde do disco", "Mostra se o disco avisa que vai falhar. Se aparecer alerta, faça backup antes de qualquer coisa.", "#hd"],
     ["Diagnóstico geral", "Confere sinais de problema no Windows.", "#rd"],
@@ -78,7 +73,7 @@ const TIPS = {
 // ---- plano de otimização (a ordem sugerida pra quem não sabe por onde começar)
 const PLAN = [
   { k: "quick", icon: "🧹", t: "Faça a faxina rápida", where: ["home"], sel: "#go", level: "Seguro", time: "1 min",
-    d: "Limpa temporários, cache e lixeira.", why: "É o jeito mais rápido de liberar espaço sem risco.", care: "Feche os navegadores antes pra limpar mais." },
+    d: "Limpa temporários, lixeira e sobras do Windows Update.", why: "É o jeito mais rápido de liberar espaço sem risco.", care: "Seus arquivos pessoais não são tocados." },
   { k: "bloat", icon: "🧨", t: "Tire o bloatware", where: ["apps", "bloat"], sel: "#rec", level: "Seguro", time: "3 min",
     d: "Remove apps de fábrica que ninguém usa.", why: "Libera espaço e tira coisa rodando à toa.", care: "Dá pra reinstalar pela Microsoft Store." },
   { k: "progs", icon: "📦", t: "Desinstale o que você não usa", where: ["apps", "progs"], sel: "#marksus", level: "Cuidado", time: "5 min",
@@ -92,14 +87,14 @@ const PLAN = [
   { k: "health", icon: "🩺", t: "Confira a saúde do PC", where: ["protect", "health"], sel: "#rd", level: "Seguro", time: "2 min",
     d: "Saúde do disco e diagnóstico do Windows.", why: "Descobre problema antes de virar perda de dados.", care: "Se o disco der alerta, faça backup antes de tudo." },
   { k: "net", icon: "🌐", t: "Melhore a internet", where: ["speed", "net"], sel: "#n-dnstest", level: "Seguro", time: "3 min",
-    d: "Teste o melhor DNS e confira o Wi-Fi e os drivers.", why: "Sites começam a abrir mais rápido.", care: "Trocar DNS é opcional e dá pra voltar ao automático." },
+    d: "Teste o melhor DNS e confira o Wi-Fi e os drivers.", why: "Sites começam a abrir mais rápido (o ping dos jogos não muda).", care: "Trocar DNS é opcional e dá pra voltar ao automático." },
   { k: "sec", icon: "🛡", t: "Ligue o vigia de temperatura (opcional)", where: ["protect", "security"], sel: "#sw-on", level: "Opcional", time: "2 min",
     d: "Baixa o clock sozinho se o PC esquentar demais.", why: "Protege notebooks e PCs que esquentam.", care: "Vem desligado: só funciona se você ligar." },
 ];
 
 // ---- otimização guiada (professor): o que a ferramenta faz em uma frase + o que clicar. A chave é a mesma do PLAN.
 const TUTOR = {
-  quick: ["Apaga temporários, cache dos navegadores e lixeira. Seus arquivos pessoais não são tocados.", "Clique em Faxina rápida."],
+  quick: ["Apaga temporários, lixeira e sobras do Windows Update. Seus arquivos pessoais não são tocados.", "Clique em Faxina rápida."],
   bloat: ["São apps que vêm no Windows e quase ninguém usa. Tirar libera espaço e deixa o PC mais leve.", "Clique em Marcar recomendados e depois em Remover marcados."],
   progs: ["Lista seus programas, os maiores primeiro. O que você não usa só ocupa espaço.", "Marque só o que você reconhece e desinstale."],
   start: ["São os programas que ligam junto com o Windows. Menos coisas ligando = PC que liga mais rápido.", "Clique em Desligar os recomendados."],

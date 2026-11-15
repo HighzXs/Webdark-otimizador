@@ -533,7 +533,7 @@ class Api:
         return None if bk.is_admin() else {"ok": False, "msg": "Precisa de administrador. Use “Reabrir como administrador”."}
 
     def net_scan(self):
-        """Adaptadores, Wi-Fi, potência de transmissão, Otimização de Entrega e limites ativos (leva uns 4 s)."""
+        """Adaptadores, Wi-Fi, potência fora do padrão, Otimização de Entrega e limites ativos (leva uns 4 s)."""
         return {**netopt.adapters_info(), "delivery": netopt.delivery_state(), "limits": netopt.qos_list(), "dns_now": netopt.current_dns()}
 
     def net_dns_test(self):
@@ -559,11 +559,11 @@ class Api:
         ok, msg = netopt.reset_dns()
         return {"ok": ok, "msg": msg}
 
-    def net_tx_set(self, adapter, keyword, value):
+    def net_tx_reset(self, adapter, keyword):
         denied = self._need_admin()
         if denied:
             return denied
-        ok, msg = netopt.set_tx_power(adapter, keyword, value)
+        ok, msg = netopt.reset_tx_power(adapter, keyword)
         return {"ok": ok, "msg": msg}
 
     def net_delivery_set(self, p2p_off, cap):
@@ -660,7 +660,7 @@ class Api:
                 on = bool(t.is_on())
             except Exception:
                 on = False
-            out.append({"key": t.key, "name": t.name, "desc": t.desc, "on": on})
+            out.append({"key": t.key, "name": t.name, "desc": t.desc, "on": on, "privacy": t.privacy})
         return out
 
     def tweak_set(self, key, on):
@@ -681,6 +681,8 @@ class Api:
             items = []
             for t in system.SYS_TWEAKS:
                 on = system.tweak_state(t, states)
+                if t.legacy and not on:
+                    continue
                 items.append({"key": t.key, "name": t.name, "desc": t.desc, "on": bool(on), "available": on is not None,
                               "warning": system.warning_text(t, kind)})
             self._emit("sys:state", {"items": items, "kind": kind, "trim": system.trim_status()})
@@ -689,7 +691,7 @@ class Api:
 
     def systweak_set(self, key, on):
         t = next((x for x in system.SYS_TWEAKS if x.key == key), None)
-        if t is None or not bk.is_admin():
+        if t is None or not bk.is_admin() or (t.legacy and on):   # ajuste antigo: só desfazer
             return False
 
         def work():
@@ -733,16 +735,12 @@ class Api:
         return {"mhz": r[0], "util": r[1]} if r else None
 
     # --------------------------------------------------------------- memória
-    def _restore_once(self, why):
-        if not self._restore_done:
-            self._restore_done, _ = bk.create_restore_point(f"WebDark - antes de {why}")
-
     def mem_scan(self):
-        """Rápido: RAM agora, programas abertos da lista e a sugestão do SvcHost."""
-        return {"ram": mem.ram_info(), "groups": mem.group_rows(self._freezer.state()), "svc": mem.svchost_info(), "auto": self.mem_auto_get()}
+        """Rápido: RAM agora, programas abertos da lista e o congelar sozinho."""
+        return {"ram": mem.ram_info(), "groups": mem.group_rows(self._freezer.state()), "auto": self.mem_auto_get()}
 
     def mem_groups(self):
-        return {"ram": mem.ram_info(), "groups": mem.group_rows(self._freezer.state()), "auto": self.mem_auto_get()}
+        return self.mem_scan()
 
     def mem_auto_get(self):
         cfg = self._prefs.get("mem_auto") or {}
@@ -756,38 +754,12 @@ class Api:
         return self.mem_auto_get()
 
     def mem_deep(self):
-        """Mais lento (PowerShell): arquivo de paginação e SysMain. Responde no evento mem:deep."""
+        """Mais lento (PowerShell): arquivo de paginação e o que versões antigas mudaram. Responde no evento mem:deep."""
         def work():
-            states = system.service_states()
-            t = next(x for x in system.SYS_TWEAKS if x.key == "sysmain")
-            on = system.tweak_state(t, states)
-            self._disk_kind = kind = system.system_disk_kind()
             self._emit("mem:deep", {"pagefile": mem.pagefile_info(),
-                                    "sysmain": {"available": on is not None, "off": bool(on), "kind": kind,
-                                                "warning": system.warning_text(t, kind)}})
+                                    "legacy": {"svchost": mem.svchost_changed(), "services": svcopt.disabled_by_app()}})
 
         self._thread(work)
-
-    def mem_standby(self, full):
-        return mem.purge_standby(bool(full))
-
-    def mem_trim(self, gid):
-        return mem.trim_group(gid)
-
-    def mem_trim_all(self):
-        freed, done, skipped = 0, 0, []
-        for gid in mem.GROUPS:
-            if not mem._procs(gid):
-                continue
-            r = mem.trim_group(gid)
-            if r["ok"]:
-                freed, done = freed + r["freed"], done + 1
-            else:
-                skipped.append(mem.GROUPS[gid][0])
-        msg = f"{bk.fmt_size(freed)} liberados em {done} programas."
-        if skipped:
-            msg += " Pulei: " + ", ".join(skipped) + "."
-        return {"ok": done > 0, "msg": msg if done else "Nada para liberar agora. " + msg}
 
     def mem_lower(self, gid, on):
         return mem.lower_group(gid, bool(on))
@@ -798,14 +770,6 @@ class Api:
     def mem_unfreeze(self, gid=None):
         return self._freezer.unfreeze(gid or None)
 
-    def mem_pagefile_apply(self, initial, maximum):
-        denied = self._need_admin()
-        if denied:
-            return denied
-        self._restore_once("mudar o arquivo de paginação")
-        ok, msg = mem.pagefile_apply(initial, maximum)
-        return {"ok": ok, "msg": msg}
-
     def mem_pagefile_auto(self):
         denied = self._need_admin()
         if denied:
@@ -813,58 +777,18 @@ class Api:
         ok, msg = mem.pagefile_auto()
         return {"ok": ok, "msg": msg}
 
-    def mem_svchost_set(self, mode):
+    def mem_legacy_undo(self):
+        """Desfaz o que versões antigas mudavam e saiu do app: SvcHost e serviços desligados."""
         denied = self._need_admin()
         if denied:
             return denied
-        info = mem.svchost_info()
-        value = mem.SVC_DEFAULT if mode == "default" else info["value"]
-        if value is None:
-            return {"ok": False, "msg": "Seu PC tem pouca RAM para essa otimização (menos de uns 3,6 GB)."}
-        self._restore_once("mudar o agrupamento de serviços")
-        ok, msg = mem.svchost_set(value)
-        return {"ok": ok, "msg": msg, "current_hex": f"0x{value:X}" if ok else None}
-
-    def mem_sysmain_set(self, off):
-        denied = self._need_admin()
-        if denied:
-            return denied
-        t = next(x for x in system.SYS_TWEAKS if x.key == "sysmain")
-        if off:
-            self._restore_once("desligar o SysMain")
-        ok, msg = system.apply_tweak(t, bool(off))
-        return {"ok": ok, "msg": msg or ("SysMain desligado." if off else "SysMain ligado de novo.")}
-
-    def svc_list(self):
-        return svcopt.list_state()
-
-    def svc_set(self, name, off):
-        denied = self._need_admin()
-        if denied:
-            return denied
-        if off:
-            self._restore_once("desligar serviços")
-        ok, msg = svcopt.set_off(name, bool(off))
-        return {"ok": ok, "msg": msg}
-
-    def svc_bulk(self, kind):
-        """kind: "low" desliga todos os de risco baixo que estão ligados; "restore" volta tudo ao que era."""
-        denied = self._need_admin()
-        if denied:
-            return denied
-        rows = svcopt.list_state()
-        if kind == "low":
-            todo = [r["name"] for r in rows if r["risk"] == "low" and not r["off"]]
-            off = True
-        else:
-            todo = [r["name"] for r in rows if r["off"] and r["can_restore"] and r["was"]]
-            off = False
-        if not todo:
-            return {"ok": True, "msg": "Nada para mudar."}
-        if off:
-            self._restore_once("desligar serviços")
-        done = [n for n in todo if svcopt.set_off(n, off)[0]]
-        return {"ok": bool(done), "msg": f"{len(done)} de {len(todo)} serviços {'desligados' if off else 'restaurados'}."}
+        msgs = []
+        if mem.svchost_changed():
+            msgs.append(mem.svchost_reset()[1])
+        done, total = svcopt.restore_all()
+        if total:
+            msgs.append(f"{done} de {total} serviços voltaram ao que eram.")
+        return {"ok": True, "msg": " ".join(msgs) or "Nada para desfazer."}
 
     # --------------------------------------------------------------- limpeza
     def clean_list(self):

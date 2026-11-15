@@ -189,11 +189,11 @@ def wifi_info():
         w.WlanCloseHandle(h, None)
 
 def adapters_info():
-    """Adaptadores físicos, sinal do Wi-Fi e a opção de potência de transmissão (se o driver tiver)."""
+    """Adaptadores físicos, sinal do Wi-Fi e potência de transmissão fora do padrão do driver (para desfazer)."""
     script = (
         "$a=@(Get-NetAdapter -Physical -EA SilentlyContinue|Select Name,InterfaceDescription,Status,LinkSpeed,PhysicalMediaType);"
         "$t=@(Get-NetAdapterAdvancedProperty -EA SilentlyContinue|?{$_.DisplayName -match 'Transmit Power|Tx Power|Pot.ncia de (Transmiss|Tx)'}|"
-        "Select Name,DisplayName,DisplayValue,RegistryKeyword,@{n='valid';e={(@($_.ValidDisplayValues)|%{[string]$_}) -join '|'}});"
+        "?{$_.DefaultDisplayValue -and $_.DisplayValue -ne $_.DefaultDisplayValue}|Select Name,DisplayName,DisplayValue,DefaultDisplayValue,RegistryKeyword);"
         "[pscustomobject]@{adapters=$a;tx=$t}|ConvertTo-Json -Depth 4 -Compress")
     try:
         d = json.loads(bk.ps(script, timeout=40) or "{}")
@@ -204,20 +204,15 @@ def adapters_info():
     tx = d.get("tx") or []
     tx = tx if isinstance(tx, list) else [tx]
     wifi = wifi_info()
-    for t in tx:
-        t["valid"] = [v for v in str(t.get("valid") or "").split("|") if v]
     return {"adapters": adapters, "wifi": wifi, "txpower": tx}
 
 
-def set_tx_power(adapter, keyword, value):
-    """Muda a potência de transmissão do Wi-Fi para um valor que o próprio driver aceita (precisa de administrador)."""
-    cur = [t for t in adapters_info()["txpower"] if t.get("Name") == adapter and t.get("RegistryKeyword") == keyword]
-    if not cur or value not in cur[0]["valid"]:
-        return False, "Esse valor não existe pro seu driver."
+def reset_tx_power(adapter, keyword):
+    """Volta a potência de transmissão do Wi-Fi ao padrão do driver (versões antigas deixavam mudar; saiu do app)."""
     esc = lambda s: str(s).replace("'", "''")
-    out = bk.ps(f"try{{Set-NetAdapterAdvancedProperty -Name '{esc(adapter)}' -RegistryKeyword '{esc(keyword)}' -DisplayValue '{esc(value)}' -ErrorAction Stop;'OK'}}"
+    out = bk.ps(f"try{{Reset-NetAdapterAdvancedProperty -Name '{esc(adapter)}' -RegistryKeyword '{esc(keyword)}' -ErrorAction Stop;'OK'}}"
                 "catch{'ERR|'+$_.Exception.Message}", timeout=60)
-    return ("OK" in out and "ERR|" not in out), (out.split("ERR|", 1)[1].strip()[:160] if "ERR|" in out else "Potência alterada. O Wi-Fi pode piscar um instante.")
+    return ("OK" in out and "ERR|" not in out), (out.split("ERR|", 1)[1].strip()[:160] if "ERR|" in out else "Potência do Wi-Fi de volta ao padrão. O Wi-Fi pode piscar um instante.")
 
 
 # ------------------------------------------------- Otimização de Entrega do Windows

@@ -39,11 +39,12 @@ class SysTweak:
     stop_on: bool = True      # parar o serviço agora ao aplicar
     start_off: tuple = ()     # serviços para iniciar ao desfazer
     hdd_warning: str = ""     # aviso extra se o disco do sistema for HD
+    legacy: bool = False      # saiu do app: só aparece se estiver aplicado, para dar pra desfazer
 
 
 SYS_TWEAKS = [
     SysTweak(
-        "telemetry", "Reduzir telemetria do Windows",
+        "telemetry", "Reduzir telemetria do Windows (privacidade)",
         "Coloca DiagTrack e dmwappushservice em Manual: o Windows para de enviar dados de uso em segundo plano.",
         "Os serviços DiagTrack (Experiências do Usuário Conectado) e dmwappushservice passam para Manual e são parados.",
         "Reduz, mas não zera a telemetria (isso só por política de grupo no Windows Pro). Pode atrapalhar "
@@ -62,12 +63,13 @@ SYS_TWEAKS = [
         "SEU DISCO É UM HD. Em HD o SysMain ajuda, e desligar tende a deixar o PC mais lento. "
         "Só continue se tiver certeza."),
     SysTweak(
-        "wsearch", "Pausar a indexação do Windows Search",
-        "Alivia o disco e o processador: o Windows para de catalogar seus arquivos em segundo plano.",
+        "wsearch", "Indexação do Windows Search pausada (ajuste antigo)",
+        "Versões antigas do WebDark ofereciam isto. Em SSD não deixa o PC mais rápido e a busca do Windows fica lenta "
+        "ou para de achar arquivos. Desligue este interruptor para voltar ao normal.",
         "O serviço WSearch (Windows Search) é desativado e parado.",
         "A busca do menu Iniciar e do Explorador de Arquivos fica bem mais lenta e pode deixar de achar "
         "conteúdo de arquivos e e-mails. A busca do Outlook também pode parar de funcionar.",
-        {"WSearch": "Disabled"}, {"WSearch": "Automatic"}, ("Disabled",), True, ("WSearch",)),
+        {"WSearch": "Disabled"}, {"WSearch": "Automatic"}, ("Disabled",), True, ("WSearch",), legacy=True),
 ]
 
 
