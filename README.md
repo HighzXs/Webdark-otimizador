@@ -2,13 +2,29 @@
 
 Programa para Windows que deixa o PC mais leve e rápido. Ele limpa arquivos inúteis, mostra a saúde do computador e ajusta a velocidade e a internet. Tudo que ele muda pode ser desfeito.
 
-Versão atual: **1.2.0**
+Versão atual: **1.3.0**
+
+![Tela inicial](docs/screenshots/inicio.png)
+
+## Telas
+
+| Limpeza | Desempenho |
+|---|---|
+| ![Limpeza](docs/screenshots/limpeza.png) | ![Desempenho](docs/screenshots/desempenho.png) |
+| **Rede** | **Memória** |
+| ![Rede](docs/screenshots/rede.png) | ![Memória](docs/screenshots/memoria.png) |
+| **Jogos** | **Saúde** |
+| ![Jogos](docs/screenshots/jogos.png) | ![Saúde](docs/screenshots/saude.png) |
+| **Temperatura** | **Ajuda** |
+| ![Temperatura](docs/screenshots/temperatura.png) | ![Ajuda](docs/screenshots/ajuda.png) |
+| **Ajustes** | |
+| ![Ajustes](docs/screenshots/ajustes.png) | |
 
 ## O que ele faz
 
 - **Espaço e limpeza**: apaga arquivos temporários e mostra o que ocupa espaço (pastas, arquivos grandes, duplicados e downloads antigos).
 - **Aplicativos**: remove programas que vêm de fábrica e não servem para nada, e lista os programas instalados.
-- **Velocidade**: ajusta o plano de energia, os programas que abrem junto com o Windows e a internet (DNS, Wi-Fi e limite de banda por programa).
+- **Velocidade**: ajusta o plano de energia, os programas que abrem junto com o Windows e a internet (DNS, Wi-Fi e limite de banda por programa). Também cuida da memória e confere o que pode estar atrapalhando os jogos.
 - **Saúde e proteção**: verifica o estado do sistema, a temperatura e os processos abertos.
 - **Ajuda**: explica o que cada tela faz.
 - **Ajustes**: muda o tema e outras preferências.
